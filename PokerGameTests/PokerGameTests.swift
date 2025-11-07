@@ -36,7 +36,7 @@ struct DeckTests {
     
     @Test("Deck shuffle")
     func testDeckShuffle() {
-        let deck1 = Deck()
+        _ = Deck()
         let deck2 = Deck()
         deck2.shuffle()
         
@@ -47,7 +47,7 @@ struct DeckTests {
     
     @Test("Deal cards")
     func testDealCards() {
-        var deck = Deck()
+        let deck = Deck()
         let initialCount = deck.remainingCards
         
         if let card = deck.deal() {
