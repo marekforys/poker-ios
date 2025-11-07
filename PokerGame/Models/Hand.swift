@@ -140,7 +140,10 @@ struct Hand {
     private func checkStraight(in cards: [Card]) -> Rank? {
         let uniqueRanks = Set(cards.map { $0.rank.rawValue }).sorted()
         
-        // Check for Ace-low straight (A-2-3-4-5)
+        // Need at least 5 unique ranks to form a straight
+        guard uniqueRanks.count >= 5 else { return nil }
+        
+        // Check for Ace-low straight (A-2-3-4-5) first
         let hasAceLow = Set([2, 3, 4, 5]).isSubset(of: uniqueRanks) && 
                        uniqueRanks.contains(Rank.ace.rawValue)
         
@@ -148,10 +151,15 @@ struct Hand {
             return .five
         }
         
-        // Check for regular straight
-        for i in 0..<uniqueRanks.count - 4 {
-            if uniqueRanks[i] + 4 == uniqueRanks[i + 4] {
-                return Rank(rawValue: uniqueRanks[i + 4])
+        // Check for regular straight (5 consecutive ranks)
+        // We only need to check up to count - 4 because we're looking at 5 cards at a time
+        for i in 0...(uniqueRanks.count - 5) {
+            let start = uniqueRanks[i]
+            let end = uniqueRanks[i + 4]
+            
+            // If the difference between first and last card is 4, it's a straight
+            if end - start == 4 {
+                return Rank(rawValue: end) // Return the highest rank in the straight
             }
         }
         
