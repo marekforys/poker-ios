@@ -10,19 +10,24 @@ struct GameView: View {
             
             VStack(spacing: 20) {
                 // Community cards
-                VStack {
+                VStack(spacing: 8) {
                     Text("Community Cards")
                         .font(.headline)
                         .foregroundColor(.white)
                     
-                    HStack(spacing: 10) {
-                        ForEach(viewModel.communityCards) { card in
-                            CardView(card: card)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: -15) { // Negative spacing to make cards overlap slightly
+                            ForEach(viewModel.communityCards) { card in
+                                CardView(card: card)
+                                    .scaleEffect(0.9) // Slightly smaller cards to fit better
+                                    .zIndex(Double(viewModel.communityCards.firstIndex(where: { $0.id == card.id }) ?? 0))
+                            }
                         }
+                        .padding(.horizontal, 20) // Add padding to prevent cards from touching screen edges
                     }
-                    .frame(height: 120)
+                    .frame(height: 110) // Slightly reduced height to fit better
                 }
-                .padding()
+                .padding(.vertical, 8)
                 .background(Color.black.opacity(0.2))
                 .cornerRadius(10)
                 .padding(.horizontal)
@@ -30,19 +35,22 @@ struct GameView: View {
                 Spacer()
                 
                 // Player's hand
-                VStack {
+                VStack(spacing: 8) {
                     Text("Your Hand")
                         .font(.headline)
                         .foregroundColor(.white)
                     
-                    HStack(spacing: 10) {
+                    HStack(spacing: -20) { // Negative spacing to make cards overlap
                         ForEach(viewModel.playerHand.cards) { card in
                             CardView(card: card)
+                                .scaleEffect(0.85) // Slightly smaller than community cards
+                                .zIndex(Double(viewModel.playerHand.cards.firstIndex(where: { $0.id == card.id }) ?? 0))
                         }
                     }
-                    .frame(height: 120)
+                    .frame(height: 100) // Reduced height for player's cards
+                    .padding(.horizontal, 20) // Add horizontal padding
                 }
-                .padding()
+                .padding(.vertical, 8)
                 .background(Color.black.opacity(0.2))
                 .cornerRadius(10)
                 .padding(.horizontal)
