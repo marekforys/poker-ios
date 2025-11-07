@@ -29,8 +29,10 @@ class PokerGameViewModel: ObservableObject {
         gameState = .dealing
         handEvaluation = nil
         
-        // Deal initial cards
-        if let card1 = deck.deal(), let card2 = deck.deal() {
+        // Deal initial cards and make them face up
+        if var card1 = deck.deal(), var card2 = deck.deal() {
+            card1.isFaceUp = true
+            card2.isFaceUp = true
             playerHand.addCard(card1)
             playerHand.addCard(card2)
         }

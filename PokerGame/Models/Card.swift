@@ -32,6 +32,10 @@ struct Card: Identifiable, Equatable {
         return "\(rank.description)\(suit.rawValue)"
     }
     
+    mutating func flip() {
+        isFaceUp.toggle()
+    }
+    
     static func == (lhs: Card, rhs: Card) -> Bool {
         return lhs.rank == rhs.rank && lhs.suit == rhs.suit
     }

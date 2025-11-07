@@ -22,7 +22,9 @@ class Deck {
     
     func deal() -> Card? {
         guard !cards.isEmpty else { return nil }
-        return cards.removeFirst()
+        var card = cards.removeFirst()
+        card.isFaceUp = true
+        return card
     }
     
     func dealCards(count: Int) -> [Card] {
