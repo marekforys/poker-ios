@@ -116,83 +116,97 @@ struct GameView: View {
 
 struct CardView: View {
     let card: Card
+    private let cardWidth: CGFloat = 80
+    private let cardHeight: CGFloat = 120
+    private let cornerRadius: CGFloat = 8
+    
+    private var cardColor: Color {
+        card.suit == .hearts || card.suit == .diamonds ? .red : .black
+    }
     
     var body: some View {
         ZStack {
-            // Card background
-            RoundedRectangle(cornerRadius: 10)
+            // Card background with border
+            RoundedRectangle(cornerRadius: cornerRadius)
                 .fill(Color.white)
-                .frame(width: 80, height: 120)
-                .shadow(radius: 5)
+                .frame(width: cardWidth, height: cardHeight)
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .shadow(radius: 2, x: 0, y: 2)
             
             if card.isFaceUp {
                 VStack(spacing: 0) {
                     // Top rank and suit
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 0) {
                             Text(card.rank.description)
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundColor(card.suit == .hearts || card.suit == .diamonds ? .red : .black)
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(cardColor)
                             Text(card.suit.rawValue)
-                                .font(.system(size: 14))
-                                .foregroundColor(card.suit == .hearts || card.suit == .diamonds ? .red : .black)
+                                .font(.system(size: 12))
+                                .foregroundColor(cardColor)
                         }
-                        .padding(.leading, 8)
-                        .padding(.top, 5)
+                        .padding(.leading, 6)
+                        .padding(.top, 6)
                         Spacer()
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    // Center suit symbol (larger)
+                    Spacer()
+                    
+                    // Center suit symbol
                     Text(card.suit.rawValue)
-                        .font(.system(size: 32))
-                        .padding(.vertical, 5)
-                        .foregroundColor(card.suit == .hearts || card.suit == .diamonds ? .red : .black)
+                        .font(.system(size: 28))
+                        .foregroundColor(cardColor)
                     
                     Spacer()
                     
                     // Bottom rank and suit (upside down)
-                    HStack {
+                    HStack(alignment: .bottom) {
                         Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
+                        VStack(alignment: .trailing, spacing: 0) {
                             Text(card.rank.description)
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundColor(card.suit == .hearts || card.suit == .diamonds ? .red : .black)
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(cardColor)
                             Text(card.suit.rawValue)
-                                .font(.system(size: 14))
-                                .foregroundColor(card.suit == .hearts || card.suit == .diamonds ? .red : .black)
+                                .font(.system(size: 12))
+                                .foregroundColor(cardColor)
                         }
                         .rotationEffect(.degrees(180))
-                        .padding(.trailing, 8)
-                        .padding(.bottom, 5)
+                        .padding(.trailing, 6)
+                        .padding(.bottom, 6)
                     }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                .frame(width: 80, height: 120)
-                .background(Color.white)
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                )
+                .frame(width: cardWidth, height: cardHeight)
             } else {
                 // Face down card
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.purple.opacity(0.8)]), 
-                                       startPoint: .topLeading, 
-                                       endPoint: .bottomTrailing))
-                    .frame(width: 80, height: 120)
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.blue.opacity(0.8),
+                            Color.purple.opacity(0.6)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: cardWidth, height: cardHeight)
                     .overlay(
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.white.opacity(0.5), lineWidth: 2)
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .stroke(Color.white.opacity(0.5), lineWidth: 1)
                             
                             // Card back pattern
                             Image(systemName: "suit.spade.fill")
-                                .font(.title2)
-                                .foregroundColor(.white.opacity(0.3))
+                                .font(.title3)
+                                .foregroundColor(.white.opacity(0.2))
                         }
                     )
             }
         }
+        .frame(width: cardWidth, height: cardHeight)
     }
 }
 
