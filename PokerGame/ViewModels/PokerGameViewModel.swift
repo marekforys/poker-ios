@@ -80,10 +80,37 @@ class PokerGameViewModel: ObservableObject {
     
     private func evaluateHand() {
         let allCards = playerHand.cards + communityCards
-        playerHand = Hand()
-        playerHand.addCards(allCards)
-        handEvaluation = playerHand.evaluate()
+        
+        // Create a new hand with just the best 5 cards
+        let bestHand = findBestHand(from: allCards)
+        playerHand = bestHand
+        
+        // Evaluate the best hand
+        handEvaluation = bestHand.evaluate()
         gameState = .gameOver
+    }
+    
+    private func findBestHand(from cards: [Card]) -> Hand {
+        guard cards.count >= 5 else { return Hand() }
+        
+        var bestHand = Hand()
+        var bestRank: HandRank = .highCard
+        
+        // Generate all possible 5-card combinations
+        let combinations = cards.combinations(of: 5)
+        
+        for combination in combinations {
+            var tempHand = Hand()
+            tempHand.addCards(combination)
+            let evaluation = tempHand.evaluate()
+            
+            if evaluation.rank > bestRank {
+                bestRank = evaluation.rank
+                bestHand = tempHand
+            }
+        }
+        
+        return bestHand
     }
     
     func getHandRankString() -> String {
