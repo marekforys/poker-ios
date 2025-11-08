@@ -66,26 +66,43 @@ struct Hand {
             return HandEvaluation(rank: .fourOfAKind, highCards: [fourOfAKindRank, kicker])
         }
         
-        // Check for Full House
-        if let threeOfAKindRank = nOfAKind(3) {
-            let remainingCards = sortedCards.filter { $0.rank != threeOfAKindRank }
-            if let pairRank = nOfAKind(2, in: remainingCards) {
+        // Get all rank counts for full house and other hand evaluations
+        let rankCounts = Dictionary(grouping: sortedCards, by: { $0.rank })
+        
+        // Find all three of a kind ranks (exactly 3 cards)
+        let threeOfAKindRanks = rankCounts.filter { $0.value.count == 3 }.keys.sorted { $0.rawValue > $1.rawValue }
+        
+        // Find all pair ranks (exactly 2 cards)
+        let pairRanks = rankCounts.filter { $0.value.count == 2 }.keys.sorted { $0.rawValue > $1.rawValue }
+        
+        // Check for full house with two three of a kinds (use the highest two)
+        if threeOfAKindRanks.count >= 2 {
+            return HandEvaluation(rank: .fullHouse, highCards: [threeOfAKindRanks[0], threeOfAKindRanks[1]])
+        }
+        
+        // Check for standard full house (three of a kind + pair)
+        if let threeOfAKindRank = threeOfAKindRanks.first, !pairRanks.isEmpty {
+            // Find the highest pair that's not part of the three of a kind
+            if let pairRank = pairRanks.first(where: { $0 != threeOfAKindRank }) {
                 return HandEvaluation(rank: .fullHouse, highCards: [threeOfAKindRank, pairRank])
+            } else if pairRanks.contains(threeOfAKindRank) {
+                // Special case: We have three of a kind and a pair of the same rank (e.g., 3,3,3,3,2,2)
+                return HandEvaluation(rank: .fullHouse, highCards: [threeOfAKindRank, threeOfAKindRank])
             }
         }
         
-        // Check for Flush
+        // Check for Flush (moved after full house check)
         if let flushHigh = isFlush() {
             return HandEvaluation(rank: .flush, highCards: [flushHigh])
         }
         
-        // Check for Straight
+        // Check for Straight (moved after flush check)
         if let straightHigh = isStraight() {
             return HandEvaluation(rank: .straight, highCards: [straightHigh])
         }
         
-        // Check for Three of a Kind
-        if let threeOfAKindRank = nOfAKind(3) {
+        // Check for three of a kind (if no full house)
+        if let threeOfAKindRank = threeOfAKindRanks.first {
             let kickers = sortedCards
                 .filter { $0.rank != threeOfAKindRank }
                 .prefix(2)
@@ -133,43 +150,92 @@ struct Hand {
         return flushCards.max { $0.rank.rawValue < $1.rank.rawValue }?.rank
     }
     
-    private func isStraight() -> Rank? {
+    func isStraight() -> Rank? {
         return checkStraight(in: cards)
     }
     
     private func checkStraight(in cards: [Card]) -> Rank? {
-        let uniqueRanks = Set(cards.map { $0.rank.rawValue }).sorted()
+        // Get unique ranks and sort them in ascending order
+        let uniqueRanks = Array(Set(cards.map { $0.rank.rawValue })).sorted()
         
         // Need at least 5 unique ranks to form a straight
-        guard uniqueRanks.count >= 5 else { return nil }
+        guard uniqueRanks.count >= 5 else {
+            return nil
+        }
         
         // Check for Ace-low straight (A-2-3-4-5) first
-        let hasAceLow = Set([2, 3, 4, 5]).isSubset(of: uniqueRanks) && 
-                       uniqueRanks.contains(Rank.ace.rawValue)
+        let wheel = [2, 3, 4, 5, 14] // A-2-3-4-5 (Ace is 14)
+        let hasWheel = Set(wheel).isSubset(of: uniqueRanks)
         
-        if hasAceLow {
-            return .five
+        if hasWheel {
+            return .five // Five is the high card in a wheel
         }
         
         // Check for regular straight (5 consecutive ranks)
-        // We only need to check up to count - 4 because we're looking at 5 cards at a time
+        // We need to check all possible sequences of 5 consecutive ranks
         for i in 0...(uniqueRanks.count - 5) {
-            let start = uniqueRanks[i]
-            let end = uniqueRanks[i + 4]
+            let currentRank = uniqueRanks[i]
+            let straightRanks = [currentRank, currentRank + 1, currentRank + 2, 
+                               currentRank + 3, currentRank + 4]
             
-            // If the difference between first and last card is 4, it's a straight
-            if end - start == 4 {
-                return Rank(rawValue: end) // Return the highest rank in the straight
+            // If all ranks in the straight exist in our unique ranks
+            if Set(straightRanks).isSubset(of: uniqueRanks) {
+                // Get the actual ranks we have that form this straight
+                let consecutiveRanks = uniqueRanks.filter { straightRanks.contains($0) }
+                
+                // Verify we have at least 5 consecutive ranks
+                if consecutiveRanks.count >= 5 {
+                    // Find the highest rank in the straight
+                    if let maxRank = straightRanks.last(where: { uniqueRanks.contains($0) }) {
+                        return Rank(rawValue: maxRank)
+                    }
+                }
             }
         }
         
         return nil
     }
     
-    private func nOfAKind(_ n: Int, in cardList: [Card]? = nil) -> Rank? {
+    func nOfAKind(_ n: Int, in cardList: [Card]? = nil) -> Rank? {
         let cardsToCheck = cardList ?? self.cards
         let rankCounts = Dictionary(grouping: cardsToCheck, by: { $0.rank })
-        return rankCounts.first { $0.value.count >= n }?.key
+        
+        // Find all ranks that have at least n cards
+        let matchingRanks = rankCounts.filter { $0.value.count >= n }
+        
+        // If no matches, return nil
+        if matchingRanks.isEmpty {
+            return nil
+        }
+        
+        // If we're looking for exactly n cards, we need to be careful not to count higher counts
+        let exactMatchRanks = matchingRanks.filter { $0.value.count == n }
+        
+        // If we have exact matches, return the highest one
+        if !exactMatchRanks.isEmpty {
+            return exactMatchRanks.keys.sorted { $0.rawValue > $1.rawValue }.first
+        }
+        
+        // Otherwise, return the highest rank with at least n cards
+        return matchingRanks.keys.sorted { $0.rawValue > $1.rawValue }.first
+    }
+    
+    private func writeToDebugFile(_ message: String) {
+        let fileManager = FileManager.default
+        let documents = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let debugFile = documents.appendingPathComponent("poker_debug.log")
+        
+        // Append to the file if it exists, otherwise create it
+        if let fileHandle = FileHandle(forWritingAtPath: debugFile.path) {
+            fileHandle.seekToEndOfFile()
+            if let data = message.data(using: .utf8) {
+                fileHandle.write(data)
+            }
+            fileHandle.closeFile()
+        } else {
+            // File doesn't exist, create it
+            try? message.write(to: debugFile, atomically: true, encoding: .utf8)
+        }
     }
     
     private func twoPair() -> [Rank]? {
