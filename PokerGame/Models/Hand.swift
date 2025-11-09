@@ -35,7 +35,7 @@ struct HandEvaluation: Equatable {
     }
 }
 
-final class Hand: Equatable {
+final class Hand: Equatable, Comparable {
     private(set) var cards: [Card] = []
     
     init() {}
@@ -368,6 +368,31 @@ final class Hand: Equatable {
     }
     
     static func == (lhs: Hand, rhs: Hand) -> Bool {
-        return lhs.cards == rhs.cards
+        let lhsEval = lhs.evaluate()
+        let rhsEval = rhs.evaluate()
+        
+        // Compare rank and high cards
+        return lhsEval.rank == rhsEval.rank && 
+               lhsEval.highCards == rhsEval.highCards
+    }
+    
+    static func < (lhs: Hand, rhs: Hand) -> Bool {
+        let lhsEval = lhs.evaluate()
+        let rhsEval = rhs.evaluate()
+        
+        // First compare by hand rank
+        if lhsEval.rank != rhsEval.rank {
+            return lhsEval.rank.rawValue < rhsEval.rank.rawValue
+        }
+        
+        // If ranks are equal, compare high cards
+        for (lhsRank, rhsRank) in zip(lhsEval.highCards, rhsEval.highCards) {
+            if lhsRank != rhsRank {
+                return lhsRank.rawValue < rhsRank.rawValue
+            }
+        }
+        
+        // If all high cards are equal, the hands are considered equal in terms of comparison
+        return false
     }
 }

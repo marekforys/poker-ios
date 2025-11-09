@@ -495,6 +495,52 @@ struct HandEvaluationTests {
     }
 }
 
+@Suite("Hand Comparison Tests")
+struct HandComparisonTests {
+    @Test("Compare different hand ranks")
+    func testCompareDifferentRanks() {
+        // Royal Flush > Straight Flush
+        let royalFlush = Hand.createHand(ranks: [.ten, .jack, .queen, .king, .ace], 
+                                       suits: [.hearts, .hearts, .hearts, .hearts, .hearts])
+        let straightFlush = Hand.createHand(ranks: [.nine, .ten, .jack, .queen, .king], 
+                                          suits: [.hearts, .hearts, .hearts, .hearts, .hearts])
+        
+        #expect(straightFlush < royalFlush)
+        #expect(royalFlush > straightFlush)
+        
+        // Straight Flush > Four of a Kind
+        let fourOfAKind = Hand.createHand(ranks: [.ace, .ace, .ace, .ace, .king], 
+                                         suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+        #expect(fourOfAKind < straightFlush)
+        #expect(straightFlush > fourOfAKind)
+    }
+    
+    @Test("Compare same rank different high cards")
+    func testCompareSameRankDifferentHighCards() {
+        // Two pair: Kings and Eights with Ace kicker
+        let twoPairHigh = Hand.createHand(ranks: [.king, .king, .eight, .eight, .ace],
+                                         suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+        // Two pair: Kings and Eights with Queen kicker
+        let twoPairLow = Hand.createHand(ranks: [.king, .king, .eight, .eight, .queen],
+                                        suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+        
+        #expect(twoPairLow < twoPairHigh)
+        #expect(twoPairHigh > twoPairLow)
+    }
+    
+    @Test("Compare equal hands")
+    func testCompareEqualHands() {
+        let hand1 = Hand.createHand(ranks: [.ace, .king, .queen, .jack, .ten],
+                                   suits: [.hearts, .hearts, .hearts, .hearts, .hearts])
+        let hand2 = Hand.createHand(ranks: [.ace, .king, .queen, .jack, .ten],
+                                   suits: [.diamonds, .diamonds, .diamonds, .diamonds, .diamonds])
+        
+        #expect(hand1 == hand2)
+        #expect(!(hand1 < hand2))
+        #expect(!(hand1 > hand2))
+    }
+}
+
 @Suite("Game Flow Tests")
 struct GameFlowTests {
     @Test("Game initialization")
