@@ -124,9 +124,21 @@ class PokerGameViewModel: ObservableObject {
         case .flush: return "Flush"
         case .straight: return "Straight"
         case .threeOfAKind: return "Three of a Kind"
-        case .twoPair: return "Two Pair"
-        case .onePair: return "One Pair"
-        case .highCard: return "High Card"
+        case .twoPair: 
+            if evaluation.highCards.count >= 2 {
+                return "Two Pair: \(evaluation.highCards[0].description)s & \(evaluation.highCards[1].description)s"
+            }
+            return "Two Pair"
+        case .onePair: 
+            if !evaluation.highCards.isEmpty {
+                return "Pair of \(evaluation.highCards[0].description)s"
+            }
+            return "One Pair"
+        case .highCard: 
+            if !evaluation.highCards.isEmpty {
+                return "High Card: \(evaluation.highCards[0].description)"
+            }
+            return "High Card"
         }
     }
 }
