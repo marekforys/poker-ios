@@ -108,7 +108,7 @@ struct HandEvaluationTests {
         
         let evaluation = hand.evaluate()
         #expect(evaluation.rank == .highCard, "Expected high card, got \(evaluation.rank)")
-        #expect(evaluation.highCards.first == .king, "Expected king as high card, got \(evaluation.highCards.first?.description ?? "nil")")
+        #expect(evaluation.highCards.first?.rank == .king, "Expected king as high card, got \(evaluation.highCards.first?.rank.description ?? "nil")")
         #expect(evaluation.highCards.count >= 5, "Expected at least 5 high cards, got \(evaluation.highCards.count)")
     }
     
@@ -129,14 +129,15 @@ struct HandEvaluationTests {
         #expect(evaluation.rank == .onePair, "Expected one pair, got \(evaluation.rank)")
         
         // Verify the pair is correctly identified
-        #expect(evaluation.highCards.first == .two, "Expected pair of twos, got \(evaluation.highCards.first?.description ?? "nil")")
+        #expect(evaluation.highCards[0].rank == .two && evaluation.highCards[1].rank == .two, 
+                "Expected pair of twos, got \(evaluation.highCards.prefix(2).map { $0.rank })")
         
         // Verify the kickers are correct (queen, ten, eight)
         let expectedKickers: [Rank] = [.queen, .ten, .eight]
         for (index, kicker) in expectedKickers.enumerated() {
-            if index + 1 < evaluation.highCards.count {
-                #expect(evaluation.highCards[index + 1] == kicker,
-                        "Expected \(kicker) at position \(index + 1), got \(evaluation.highCards[index + 1])")
+            if index + 2 < evaluation.highCards.count {
+                #expect(evaluation.highCards[index + 2].rank == kicker,
+                        "Expected \(kicker) at position \(index + 2), got \(evaluation.highCards[index + 2].rank)")
             }
         }
     }
@@ -158,14 +159,21 @@ struct HandEvaluationTests {
         #expect(evaluation.rank == .twoPair, "Expected two pair, got \(evaluation.rank)")
         
         // Verify the two pairs are correctly identified
-        #expect(evaluation.highCards.count >= 3, "Expected at least 3 high cards, got \(evaluation.highCards.count)")
+        #expect(evaluation.highCards.count >= 4, "Expected at least 4 high cards, got \(evaluation.highCards.count)")
         
-        // First high card should be the higher pair (fours)
-        #expect(evaluation.highCards[0] == .four, "Expected four as first pair, got \(evaluation.highCards[0])")
-        #expect(evaluation.highCards[1] == .two, "Expected two as second pair, got \(evaluation.highCards[1])")
+        // First two cards should be the higher pair (fours)
+        #expect(evaluation.highCards[0].rank == .four && evaluation.highCards[1].rank == .four, 
+                "Expected pair of fours, got \(evaluation.highCards[0..<2].map { $0.rank })")
+                
+        // Next two cards should be the lower pair (twos)
+        #expect(evaluation.highCards[2].rank == .two && evaluation.highCards[3].rank == .two, 
+                "Expected pair of twos, got \(evaluation.highCards[2..<4].map { $0.rank })")
         
         // The last high card should be the highest kicker (ten)
-        #expect(evaluation.highCards[2] == .ten, "Expected ten as kicker, got \(evaluation.highCards[2])")
+        if evaluation.highCards.count > 4 {
+            #expect(evaluation.highCards[4].rank == .ten, 
+                    "Expected ten as kicker, got \(evaluation.highCards[4].rank)")
+        }
     }
     
     // MARK: - Three of a Kind
@@ -190,17 +198,20 @@ struct HandEvaluationTests {
         
         // Verify the three of a kind is correctly identified
         #expect(evaluation.highCards.count >= 3, 
-                "Expected at least 4 high cards, got \(evaluation.highCards.count)")
+                "Expected at least 3 high cards, got \(evaluation.highCards.count)")
         
-        #expect(evaluation.highCards[0] == .three, 
-                "Expected three of a kind of threes, got \(evaluation.highCards[0])")
+        // First three cards should be the three of a kind
+        #expect(evaluation.highCards[0].rank == .three && 
+                evaluation.highCards[1].rank == .three && 
+                evaluation.highCards[2].rank == .three,
+                "Expected three of a kind of threes, got \(evaluation.highCards[0..<3].map { $0.rank })")
         
         // The remaining high cards should be the highest kickers (jack, nine, seven)
         let expectedKickers: [Rank] = [.jack, .nine, .seven]
         for (index, kicker) in expectedKickers.enumerated() {
-            if index + 1 < evaluation.highCards.count {
-                #expect(evaluation.highCards[index + 1] == kicker,
-                        "Expected \(kicker) at position \(index + 1), got \(evaluation.highCards[index + 1])")
+            if index + 3 < evaluation.highCards.count {
+                #expect(evaluation.highCards[index + 3].rank == kicker,
+                        "Expected \(kicker) at position \(index + 3), got \(evaluation.highCards[index + 3].rank)")
             }
         }
     }
@@ -218,7 +229,8 @@ struct HandEvaluationTests {
         
         let evaluation = hand.evaluate()
         #expect(evaluation.rank == .straight, "Expected straight, got \(evaluation.rank)")
-        #expect(evaluation.highCards.first == .six, "Expected high card to be six, got \(evaluation.highCards.first?.description ?? "nil")")
+        #expect(evaluation.highCards.first?.rank == .six, "Expected high card to be six, got \(evaluation.highCards.first?.rank.description ?? "nil")")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in straight, got \(evaluation.highCards.count)")
     }
     
     @Test("Ace-low Straight (A-2-3-4-5)")
@@ -233,7 +245,9 @@ struct HandEvaluationTests {
         
         let evaluation = hand.evaluate()
         #expect(evaluation.rank == .straight, "Expected straight, got \(evaluation.rank)")
-        #expect(evaluation.highCards.first == .five, "Expected high card to be five (A-2-3-4-5 is a straight with five high), got \(evaluation.highCards.first?.description ?? "nil")")
+        #expect(evaluation.highCards.first?.rank == .five, 
+                "Expected high card to be five (A-2-3-4-5 is a straight with five high), got \(evaluation.highCards.first?.rank.description ?? "nil")")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in straight, got \(evaluation.highCards.count)")
     }
     
     @Test("Ace-high Straight (10-J-Q-K-A)")
@@ -248,7 +262,9 @@ struct HandEvaluationTests {
         
         let evaluation = hand.evaluate()
         #expect(evaluation.rank == .straight, "Expected straight, got \(evaluation.rank)")
-        #expect(evaluation.highCards.first == .ace, "Expected high card to be ace, got \(evaluation.highCards.first?.description ?? "nil")")
+        #expect(evaluation.highCards.first?.rank == .ace, 
+                "Expected high card to be ace, got \(evaluation.highCards.first?.rank.description ?? "nil")")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in straight, got \(evaluation.highCards.count)")
     }
     
     @Test("Straight with Extra Cards")
@@ -263,86 +279,120 @@ struct HandEvaluationTests {
         
         let evaluation = hand.evaluate()
         #expect(evaluation.rank == .straight, "Expected straight, got \(evaluation.rank)")
-        #expect(evaluation.highCards.first == .seven, "Expected high card to be seven, got \(evaluation.highCards.first?.description ?? "nil")")
+        #expect(evaluation.highCards.first?.rank == .seven, "Expected high card to be seven, got \(evaluation.highCards.first?.rank.description ?? "none")")
     }
     
     // MARK: - Flush
     @Test("Flush")
     func testFlush() {
-        var hand = Hand()
+        let hand = Hand()
         hand.addCards([.two, .four, .six, .eight, .ten, .ace], suit: .hearts)
         hand.addCards([.king], suit: .spades) // Should be ignored for flush
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .flush)
+        #expect(evaluation.rank == .flush, "Expected flush, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in flush, got \(evaluation.highCards.count)")
+        #expect(evaluation.highCards.first?.rank == .ace, "Expected ace as high card, got \(evaluation.highCards.first?.rank.description ?? "nil")")
     }
     
     // MARK: - Full House
     @Test("Full House")
     func testFullHouse() {
-        var hand = Hand()
+        let hand = Hand()
         let cards: [Rank] = [.two, .two, .three, .three, .three, .five, .six]
         hand.addCards(cards)
         
-        print("Testing full house with cards:", cards.map { $0.rawValue })
-        
         let evaluation = hand.evaluate()
-        print("Evaluation result:", "rank:", evaluation.rank, "highCards:", evaluation.highCards.map { $0.rawValue })
-        
         #expect(evaluation.rank == .fullHouse, "Expected full house, got \(evaluation.rank)")
-        #expect(evaluation.highCards.count >= 2, "Expected at least 2 high cards, got \(evaluation.highCards.count)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in full house, got \(evaluation.highCards.count)")
         
-        if evaluation.highCards.count >= 1 {
-            print("First high card:", evaluation.highCards[0].rawValue)
-            #expect(evaluation.highCards[0] == .three, "Expected three of a kind of threes, got \(evaluation.highCards[0])")
-        }
+        // First three cards should be the three of a kind (threes)
+        let threeOfAKindCards = evaluation.highCards.prefix(3)
+        #expect(threeOfAKindCards.allSatisfy { $0.rank == .three },
+                "Expected three of a kind of threes, got \(threeOfAKindCards.map { $0.rank })")
         
-        if evaluation.highCards.count >= 2 {
-            print("Second high card:", evaluation.highCards[1].rawValue)
-            #expect(evaluation.highCards[1] == .two, "Expected pair of twos, got \(evaluation.highCards[1])")
-        }
+        // Next two cards should be the pair (twos)
+        let pairCards = Array(evaluation.highCards.suffix(2))
+        #expect(pairCards.count == 2 && pairCards.allSatisfy { $0.rank == .two },
+                "Expected pair of twos, got \(pairCards.map { $0.rank })")
     }
     
     // MARK: - Four of a Kind
     @Test("Four of a Kind")
     func testFourOfAKind() {
-        var hand = Hand()
+        let hand = Hand()
         hand.addCards([.two, .two, .two, .two, .five, .six, .seven])
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .fourOfAKind)
+        #expect(evaluation.rank == .fourOfAKind, "Expected four of a kind, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards, got \(evaluation.highCards.count)")
+        
+        // First four cards should be the four of a kind (twos)
+        let fourOfAKindCards = evaluation.highCards.prefix(4)
+        #expect(fourOfAKindCards.allSatisfy { $0.rank == .two },
+                "Expected four of a kind of twos, got \(fourOfAKindCards.map { $0.rank })")
+        
+        // Last card should be the highest kicker (seven)
+        if evaluation.highCards.count > 4 {
+            #expect(evaluation.highCards[4].rank == .seven,
+                    "Expected seven as kicker, got \(evaluation.highCards[4].rank)")
+        }
     }
     
     // MARK: - Straight Flush
     @Test("Straight Flush")
     func testStraightFlush() {
-        var hand = Hand()
+        let hand = Hand()
         hand.addCards([.two, .three, .four, .five, .six], suit: .hearts)
         hand.addCards([.king, .ace], suit: .spades) // Should be ignored
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .straightFlush)
+        #expect(evaluation.rank == .straightFlush, "Expected straight flush, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in straight flush, got \(evaluation.highCards.count)")
+        
+        // All cards should be of the same suit (hearts)
+        let uniqueSuits = Set(evaluation.highCards.map { $0.suit })
+        #expect(uniqueSuits.count == 1, "Expected all cards to be of the same suit, got \(uniqueSuits)")
+        
+        // Cards should form a straight from two to six
+        let expectedRanks: Set<Rank> = [.two, .three, .four, .five, .six]
+        let actualRanks = Set(evaluation.highCards.map { $0.rank })
+        #expect(actualRanks == expectedRanks, "Expected straight flush from two to six, got \(actualRanks)")
     }
     
     // MARK: - Royal Flush
     @Test("Royal Flush")
     func testRoyalFlush() {
-        var hand = Hand()
+        let hand = Hand()
         hand.addCards([.ten, .jack, .queen, .king, .ace], suit: .hearts)
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .royalFlush)
+        #expect(evaluation.rank == .royalFlush, "Expected royal flush, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in royal flush, got \(evaluation.highCards.count)")
+        
+        // All cards should be of the same suit (hearts)
+        let uniqueSuits = Set(evaluation.highCards.map { $0.suit })
+        #expect(uniqueSuits.count == 1, "Expected all cards to be of the same suit, got \(uniqueSuits)")
+        
+        // Cards should be 10-J-Q-K-A of the same suit
+        let expectedRanks: Set<Rank> = [.ten, .jack, .queen, .king, .ace]
+        let actualRanks = Set(evaluation.highCards.map { $0.rank })
+        #expect(actualRanks == expectedRanks, "Expected royal flush, got \(actualRanks)")
     }
     
     // MARK: - Edge Cases
     @Test("Less Than 5 Cards")
     func testLessThanFiveCards() {
-        var hand = Hand()
+        let hand = Hand()
         hand.addCards([.ace, .ace, .king])
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .highCard)
+        #expect(evaluation.rank == .highCard, "Expected high card, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 3, "Expected 3 cards, got \(evaluation.highCards.count)")
+        #expect(evaluation.highCards[0].rank == .ace && evaluation.highCards[1].rank == .ace,
+                "Expected two aces, got \(evaluation.highCards.prefix(2).map { $0.rank })")
+        #expect(evaluation.highCards[2].rank == .king, "Expected king as last card, got \(evaluation.highCards[2].rank)")
     }
     
     @Test("Multiple Possible Hands - Best Should Win")
     func testMultiplePossibleHands() {
         // This hand has both a straight and a flush, should evaluate to straight flush
-        var hand = Hand()
+        let hand = Hand()
         hand.addCards([
             (.two, .hearts),
             (.three, .hearts),
@@ -353,7 +403,16 @@ struct HandEvaluationTests {
             (.ace, .diamonds)
         ])
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .straightFlush)
+        #expect(evaluation.rank == .straightFlush, "Expected straight flush, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards, got \(evaluation.highCards.count)")
+        
+        // All cards should be hearts and form a straight
+        let uniqueSuits = Set(evaluation.highCards.map { $0.suit })
+        #expect(uniqueSuits == [.hearts], "Expected all cards to be hearts, got \(uniqueSuits)")
+        
+        let ranks = evaluation.highCards.map { $0.rank }
+        let expectedRanks: [Rank] = [.two, .three, .four, .five, .six].sorted { $0.rawValue > $1.rawValue }
+        #expect(Set(ranks) == Set(expectedRanks), "Expected straight from two to six, got \(ranks)")
     }
     
     // MARK: - Edge Cases
@@ -363,12 +422,23 @@ struct HandEvaluationTests {
         // Should use A♥ K♥ Q♥ J♥ 10♥ (royal flush) instead of the pair of twos
         let suits: [Suit] = [.hearts, .hearts, .hearts, .hearts, .hearts, .spades, .clubs]
         let ranks: [Rank] = [.ace, .king, .queen, .jack, .ten, .two, .two]
-        var hand = Hand.createHand(ranks: ranks, suits: suits)
+        let hand = Hand.createHand(ranks: ranks, suits: suits)
         let evaluation = hand.evaluate()
         
         // Verify it's a royal flush
         #expect(evaluation.rank == .royalFlush, "Expected royal flush, got \(evaluation.rank)")
-        #expect(evaluation.highCards.first == .ace, "Expected ace as high card, got \(evaluation.highCards.first?.description ?? "nil")")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards, got \(evaluation.highCards.count)")
+        
+        // All cards should be hearts
+        let uniqueSuits = Set(evaluation.highCards.map { $0.suit })
+        #expect(uniqueSuits == [.hearts], "Expected all cards to be hearts, got \(uniqueSuits)")
+        
+        // Should have the royal flush cards (10-J-Q-K-A)
+        let expectedRanks: Set<Rank> = [.ten, .jack, .queen, .king, .ace]
+        let actualRanks = Set(evaluation.highCards.map { $0.rank })
+        #expect(actualRanks == expectedRanks, "Expected royal flush, got \(actualRanks)")
+        #expect(evaluation.highCards.first?.rank == .ace, 
+                "Expected ace as high card, got \(evaluation.highCards.first?.rank.description ?? "nil")")
     }
     
     @Test("One Pair Hand Evaluation")
@@ -376,20 +446,22 @@ struct HandEvaluationTests {
         // Test a hand with one pair and kickers
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts, .diamonds, .clubs]
         let ranks: [Rank] = [.ace, .ace, .king, .queen, .ten, .eight, .five]
-        var hand = Hand.createHand(ranks: ranks, suits: suits)
+        let hand = Hand.createHand(ranks: ranks, suits: suits)
         let evaluation = hand.evaluate()
         
         #expect(evaluation.rank == .onePair, "Expected one pair, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count >= 4, "Expected at least 4 high cards, got \(evaluation.highCards.count)")
         
-        // First high card should be the pair rank (ace)
-        #expect(evaluation.highCards.first == .ace, "Expected ace as first high card, got \(evaluation.highCards.first?.description ?? "nil")")
+        // First two cards should be the pair (aces)
+        #expect(evaluation.highCards[0].rank == .ace && evaluation.highCards[1].rank == .ace,
+               "Expected pair of aces, got \(evaluation.highCards.prefix(2).map { $0.rank })")
         
         // Verify the kickers are correct (king, queen, ten)
         let expectedKickers: [Rank] = [.king, .queen, .ten]
-        for i in 0..<min(3, evaluation.highCards.count - 1) {
-            if i + 1 < evaluation.highCards.count {
-                #expect(evaluation.highCards[i + 1] == expectedKickers[i], 
-                       "Expected \(expectedKickers[i]) at position \(i + 1), got \(evaluation.highCards[i + 1])")
+        for i in 0..<min(3, evaluation.highCards.count - 2) {
+            if i + 2 < evaluation.highCards.count {
+                #expect(evaluation.highCards[i + 2].rank == expectedKickers[i], 
+                       "Expected \(expectedKickers[i]) at position \(i + 2), got \(evaluation.highCards[i + 2].rank)")
             }
         }
     }
@@ -399,11 +471,22 @@ struct HandEvaluationTests {
         // Should use the higher three of a kind for the full house
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .hearts, .diamonds, .clubs, .spades]
         let ranks: [Rank] = [.ace, .ace, .ace, .king, .king, .king, .queen]
-        var hand = Hand.createHand(ranks: ranks, suits: suits)
+        
+        let hand = Hand.createHand(ranks: ranks, suits: suits)
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .fullHouse)
-        #expect(evaluation.highCards[0] == .ace) // Should use aces full of kings
-        #expect(evaluation.highCards[1] == .king)
+        
+        #expect(evaluation.rank == .fullHouse, "Expected full house, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in full house, got \(evaluation.highCards.count)")
+        
+        // First three cards should be the three of a kind (aces)
+        let threeOfAKindCards = evaluation.highCards.prefix(3)
+        #expect(threeOfAKindCards.allSatisfy { $0.rank == .ace },
+               "Expected three aces, got \(threeOfAKindCards.map { $0.rank })")
+        
+        // Next two cards should be the pair (kings)
+        let pairCards = Array(evaluation.highCards.suffix(2))
+        #expect(pairCards.count == 2 && pairCards.allSatisfy { $0.rank == .king },
+               "Expected pair of kings, got \(pairCards.map { $0.rank })")
     }
     
     @Test("Flush with Straight But Not Straight Flush")
@@ -411,9 +494,21 @@ struct HandEvaluationTests {
         // Has a flush and a straight, but not a straight flush
         let suits: [Suit] = [.hearts, .hearts, .hearts, .hearts, .hearts, .spades, .clubs]
         let ranks: [Rank] = [.two, .four, .five, .six, .seven, .eight, .ten]
-        var hand = Hand.createHand(ranks: ranks, suits: suits)
+        
+        let hand = Hand.createHand(ranks: ranks, suits: suits)
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .flush) // Should be a flush, not a straight
+        
+        #expect(evaluation.rank == .flush, "Expected flush, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in flush, got \(evaluation.highCards.count)")
+        
+        // All cards should be hearts
+        let uniqueSuits = Set(evaluation.highCards.map { $0.suit })
+        #expect(uniqueSuits == [.hearts], "Expected all cards to be hearts, got \(uniqueSuits)")
+        
+        // Cards should form a straight from two to seven
+        let expectedRanks: Set<Rank> = [.two, .four, .five, .six, .seven]
+        let actualRanks = Set(evaluation.highCards.map { $0.rank })
+        #expect(actualRanks == expectedRanks, "Expected straight from two to seven, got \(actualRanks)")
     }
     
     @Test("Straight with Duplicate Ranks")
@@ -421,10 +516,17 @@ struct HandEvaluationTests {
         // Has a straight despite duplicate ranks
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts, .diamonds, .clubs]
         let ranks: [Rank] = [.two, .two, .three, .four, .five, .six, .six]
-        var hand = Hand.createHand(ranks: ranks, suits: suits)
+        
+        let hand = Hand.createHand(ranks: ranks, suits: suits)
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .straight)
-        #expect(evaluation.highCards.first == .six) // Highest card in the straight
+        
+        #expect(evaluation.rank == .straight, "Expected straight, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in straight, got \(evaluation.highCards.count)")
+        
+        // Cards should form a straight from two to six
+        let expectedRanks: Set<Rank> = [.two, .three, .four, .five, .six]
+        let actualRanks = Set(evaluation.highCards.map { $0.rank })
+        #expect(actualRanks == expectedRanks, "Expected straight from two to six, got \(actualRanks)")
     }
     
     @Test("Wheel Straight with Extra Cards")
@@ -432,10 +534,17 @@ struct HandEvaluationTests {
         // A-2-3-4-5 straight (wheel) with extra cards
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts, .diamonds, .clubs]
         let ranks: [Rank] = [.ace, .two, .three, .four, .five, .seven, .nine]
-        var hand = Hand.createHand(ranks: ranks, suits: suits)
+        
+        let hand = Hand.createHand(ranks: ranks, suits: suits)
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank == .straight)
-        #expect(evaluation.highCards.first == .five) // Five is the high card in a wheel
+        
+        #expect(evaluation.rank == .straight, "Expected straight, got \(evaluation.rank)")
+        #expect(evaluation.highCards.count == 5, "Expected 5 cards in straight, got \(evaluation.highCards.count)")
+        
+        // Cards should form a straight from ace to five
+        let expectedRanks: Set<Rank> = [.ace, .two, .three, .four, .five]
+        let actualRanks = Set(evaluation.highCards.map { $0.rank })
+        #expect(actualRanks == expectedRanks, "Expected straight from ace to five, got \(actualRanks)")
     }
     
     @Test("No Straight with Gaps")
@@ -443,9 +552,11 @@ struct HandEvaluationTests {
         // Should not be a straight due to gaps
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts]
         let ranks: [Rank] = [.two, .four, .five, .six, .eight]
-        var hand = Hand.createHand(ranks: ranks, suits: suits)
+        
+        let hand = Hand.createHand(ranks: ranks, suits: suits)
         let evaluation = hand.evaluate()
-        #expect(evaluation.rank != .straight)
+        
+        #expect(evaluation.rank != .straight, "Expected not to be a straight, got \(evaluation.rank)")
     }
     
     @Test("Tie Breaker - One Pair with Different Kickers")
@@ -458,15 +569,8 @@ struct HandEvaluationTests {
         let hand2Ranks: [Rank] = [.ace, .ace, .king, .queen, .ten]
         let hand2Suits: [Suit] = [.clubs, .spades, .diamonds, .hearts, .spades]
         
-        var hand1 = Hand()
-        for (index, rank) in hand1Ranks.enumerated() {
-            hand1.addCard(Card(rank: rank, suit: hand1Suits[index]))
-        }
-        
-        var hand2 = Hand()
-        for (index, rank) in hand2Ranks.enumerated() {
-            hand2.addCard(Card(rank: rank, suit: hand2Suits[index]))
-        }
+        let hand1 = Hand.createHand(ranks: hand1Ranks, suits: hand1Suits)
+        let hand2 = Hand.createHand(ranks: hand2Ranks, suits: hand2Suits)
         
         let eval1 = hand1.evaluate()
         let eval2 = hand2.evaluate()
@@ -476,17 +580,17 @@ struct HandEvaluationTests {
         #expect(eval2.rank == .onePair, "Hand 2: Expected onePair, got \(eval2.rank)")
         
         // Both should have ace as the pair
-        #expect(eval1.highCards.first == .ace, "Hand 1: Expected ace as first high card, got \(eval1.highCards.first?.description ?? "nil")")
-        #expect(eval2.highCards.first == .ace, "Hand 2: Expected ace as first high card, got \(eval2.highCards.first?.description ?? "nil")")
+        #expect(eval1.highCards.first?.rank == .ace, "Hand 1: Expected ace as first high card, got \(eval1.highCards.first?.rank.description ?? "nil")")
+        #expect(eval2.highCards.first?.rank == .ace, "Hand 2: Expected ace as first high card, got \(eval2.highCards.first?.rank.description ?? "nil")")
         
         // Hand 1 should win because of the higher kicker (J vs T)
         if eval1.highCards.count >= 4 && eval2.highCards.count >= 4 {
             // Check the kickers (after the pair)
             for i in 1..<4 { // Check first 3 kickers
-                if i < eval1.highCards.count && i < eval2.highCards.count {
-                    if eval1.highCards[i] != eval2.highCards[i] {
-                        #expect(eval1.highCards[i].rawValue > eval2.highCards[i].rawValue,
-                                "Hand 1's \(eval1.highCards[i]) should beat Hand 2's \(eval2.highCards[i])")
+                if i + 1 < eval1.highCards.count && i + 1 < eval2.highCards.count {
+                    if eval1.highCards[i + 1].rank != eval2.highCards[i + 1].rank {
+                        #expect(eval1.highCards[i + 1] > eval2.highCards[i + 1],
+                                "Hand 1's \(eval1.highCards[i + 1]) should beat Hand 2's \(eval2.highCards[i + 1])")
                         break
                     }
                 }
@@ -500,19 +604,19 @@ struct HandComparisonTests {
     @Test("Compare different hand ranks")
     func testCompareDifferentRanks() {
         // Royal Flush > Straight Flush
-        let royalFlush = Hand.createHand(ranks: [.ten, .jack, .queen, .king, .ace], 
+        let royalFlush = Hand.createHand(ranks: [.ten, .jack, .queen, .king, .ace],
                                        suits: [.hearts, .hearts, .hearts, .hearts, .hearts])
-        let straightFlush = Hand.createHand(ranks: [.nine, .ten, .jack, .queen, .king], 
+        let straightFlush = Hand.createHand(ranks: [.nine, .ten, .jack, .queen, .king],
                                           suits: [.hearts, .hearts, .hearts, .hearts, .hearts])
-        
-        #expect(straightFlush < royalFlush)
-        #expect(royalFlush > straightFlush)
-        
+
+        #expect(straightFlush < royalFlush, "Expected royal flush to beat straight flush")
+        #expect(royalFlush > straightFlush, "Expected straight flush to lose to royal flush")
+
         // Straight Flush > Four of a Kind
-        let fourOfAKind = Hand.createHand(ranks: [.ace, .ace, .ace, .ace, .king], 
+        let fourOfAKind = Hand.createHand(ranks: [.ace, .ace, .ace, .ace, .king],
                                          suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
-        #expect(fourOfAKind < straightFlush)
-        #expect(straightFlush > fourOfAKind)
+        #expect(fourOfAKind < straightFlush, "Expected straight flush to beat four of a kind")
+        #expect(straightFlush > fourOfAKind, "Expected four of a kind to lose to straight flush")
     }
     
     @Test("Compare same rank different high cards")
@@ -523,21 +627,95 @@ struct HandComparisonTests {
         // Two pair: Kings and Eights with Queen kicker
         let twoPairLow = Hand.createHand(ranks: [.king, .king, .eight, .eight, .queen],
                                         suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+
+        #expect(twoPairLow < twoPairHigh, "Expected two pair with ace kicker to be higher")
+        #expect(twoPairHigh > twoPairLow, "Expected two pair with queen kicker to be lower")
         
-        #expect(twoPairLow < twoPairHigh)
-        #expect(twoPairHigh > twoPairLow)
+        // Both hands should have the same rank
+        let evalHigh = twoPairHigh.evaluate()
+        let evalLow = twoPairLow.evaluate()
+        #expect(evalHigh.rank == .twoPair && evalLow.rank == .twoPair, 
+               "Expected both hands to be two pair, got \(evalHigh.rank) and \(evalLow.rank)")
     }
     
     @Test("Compare equal hands")
     func testCompareEqualHands() {
-        let hand1 = Hand.createHand(ranks: [.ace, .king, .queen, .jack, .ten],
-                                   suits: [.hearts, .hearts, .hearts, .hearts, .hearts])
-        let hand2 = Hand.createHand(ranks: [.ace, .king, .queen, .jack, .ten],
-                                   suits: [.diamonds, .diamonds, .diamonds, .diamonds, .diamonds])
+        // Test royal flushes of different suits
+        let royalFlush1 = Hand.createHand(ranks: [.ace, .king, .queen, .jack, .ten],
+                                       suits: [.hearts, .hearts, .hearts, .hearts, .hearts])
+        let royalFlush2 = Hand.createHand(ranks: [.ace, .king, .queen, .jack, .ten],
+                                       suits: [.diamonds, .diamonds, .diamonds, .diamonds, .diamonds])
+
+        // Both hands should evaluate to the same rank (royal flush)
+        let eval1 = royalFlush1.evaluate()
+        let eval2 = royalFlush2.evaluate()
+        #expect(eval1.rank == .royalFlush && eval2.rank == .royalFlush,
+               "Expected both hands to be royal flushes, got \(eval1.rank) and \(eval2.rank)")
         
-        #expect(hand1 == hand2)
-        #expect(!(hand1 < hand2))
-        #expect(!(hand1 > hand2))
+        // The hands should be considered equal regardless of suit
+        #expect(royalFlush1 == royalFlush2, "Expected royal flushes to be equal")
+        #expect(!(royalFlush1 < royalFlush2), "Expected royal flushes to not be less than each other")
+        #expect(!(royalFlush1 > royalFlush2), "Expected royal flushes to not be greater than each other")
+        
+        // Test another hand type (two pair) with different suits
+        let twoPair1 = Hand.createHand(ranks: [.king, .king, .eight, .eight, .ace],
+                                     suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+        let twoPair2 = Hand.createHand(ranks: [.king, .king, .eight, .eight, .ace],
+                                     suits: [.clubs, .spades, .hearts, .diamonds, .clubs])
+        
+        let eval3 = twoPair1.evaluate()
+        let eval4 = twoPair2.evaluate()
+        #expect(eval3.rank == .twoPair && eval4.rank == .twoPair,
+               "Expected both hands to be two pairs, got \(eval3.rank) and \(eval4.rank)")
+        #expect(twoPair1 == twoPair2, "Expected two pairs to be equal regardless of suit")
+    }
+    
+    @Test("Compare wheel straight to higher straight")
+    func testCompareWheelStraight() {
+        // Wheel straight (A-2-3-4-5)
+        let wheel = Hand.createHand(ranks: [.ace, .two, .three, .four, .five],
+                                  suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+        
+        // Higher straight (2-3-4-5-6)
+        let higherStraight = Hand.createHand(ranks: [.two, .three, .four, .five, .six],
+                                           suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+        
+        let wheelEval = wheel.evaluate()
+        let straightEval = higherStraight.evaluate()
+        
+        #expect(wheelEval.rank == .straight, "Expected wheel to be a straight")
+        #expect(straightEval.rank == .straight, "Expected 2-6 to be a straight")
+        #expect(wheel < higherStraight, "Expected 2-6 straight to beat A-5 straight")
+        #expect(higherStraight > wheel, "Expected A-5 straight to lose to 2-6 straight")
+    }
+    
+    @Test("Compare hands with same rank different kickers")
+    func testCompareSameRankDifferentKickers() {
+        // Test one pair with different kickers
+        let pairHighKicker = Hand.createHand(ranks: [.king, .king, .ace, .queen, .jack],
+                                           suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+        let pairLowKicker = Hand.createHand(ranks: [.king, .king, .ace, .queen, .ten],
+                                          suits: [.hearts, .diamonds, .clubs, .spades, .diamonds])
+        
+        let eval1 = pairHighKicker.evaluate()
+        let eval2 = pairLowKicker.evaluate()
+        
+        #expect(eval1.rank == .onePair && eval2.rank == .onePair,
+               "Expected both hands to be one pair, got \(eval1.rank) and \(eval2.rank)")
+        #expect(pairHighKicker > pairLowKicker, "Expected pair with jack kicker to beat pair with ten kicker")
+        
+        // Test high card with different kickers
+        let highCard1 = Hand.createHand(ranks: [.ace, .king, .queen, .jack, .nine],
+                                      suits: [.hearts, .diamonds, .clubs, .spades, .hearts])
+        let highCard2 = Hand.createHand(ranks: [.ace, .king, .queen, .jack, .eight],
+                                      suits: [.hearts, .diamonds, .clubs, .spades, .diamonds])
+        
+        let eval3 = highCard1.evaluate()
+        let eval4 = highCard2.evaluate()
+        
+        #expect(eval3.rank == .highCard && eval4.rank == .highCard,
+               "Expected both hands to be high card, got \(eval3.rank) and \(eval4.rank)")
+        #expect(highCard1 > highCard2, "Expected high card with nine to beat high card with eight")
     }
 }
 

@@ -80,8 +80,8 @@ struct GameView: View {
                             if evaluation.rank == .highCard, !evaluation.highCards.isEmpty {
                                 // Create a card view for the high card
                                 let highCard = evaluation.highCards[0]
-                                let card = Card(rank: highCard, suit: .hearts, isFaceUp: true) // Suit is arbitrary for display
-                                CardView(card: card)
+                                //highCard.isFaceUp = true
+                                CardView(card: highCard)
                                     .scaleEffect(0.6)
                             }
                         }

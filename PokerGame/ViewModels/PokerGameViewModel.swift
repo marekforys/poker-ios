@@ -90,7 +90,7 @@ class PokerGameViewModel: ObservableObject {
             
             // Update best hand cards based on evaluation
             if let evaluation = handEvaluation {
-                bestHandCards = evaluation.cardIndices.map { allCards[$0] }
+                bestHandCards = evaluation.highCards
             }
             
             gameState = .gameOver

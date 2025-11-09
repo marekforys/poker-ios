@@ -22,7 +22,7 @@ enum Rank: Int, CaseIterable {
     }
 }
 
-final class Card: Identifiable, Equatable {
+final class Card: Identifiable, Equatable, Comparable {
     let id = UUID()
     let rank: Rank
     let suit: Suit
@@ -44,5 +44,9 @@ final class Card: Identifiable, Equatable {
     
     static func == (lhs: Card, rhs: Card) -> Bool {
         return lhs.rank == rhs.rank && lhs.suit == rhs.suit
+    }
+    
+    static func < (lhs: Card, rhs: Card) -> Bool {
+        return lhs.rank.rawValue < rhs.rank.rawValue
     }
 }
