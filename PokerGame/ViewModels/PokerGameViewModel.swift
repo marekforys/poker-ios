@@ -111,7 +111,7 @@ class PokerGameViewModel: ObservableObject {
             tempHand.addCards(combination)
             let evaluation = tempHand.evaluate()
             
-            if evaluation.rank > bestRank {
+            if evaluation.rank >= bestRank {
                 bestRank = evaluation.rank
                 bestHand = tempHand
             }
