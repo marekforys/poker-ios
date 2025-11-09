@@ -21,20 +21,22 @@ struct GameView: View {
                                 let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
                                 CardView(card: card)
                                     .scaleEffect(0.9) // Slightly smaller cards to fit better
-                                    .offset(y: isBestCard ? -20 : 0)
-                                    .zIndex(isBestCard ? 1 : 0) // Use a simple z-index for best cards
+                                    .offset(y: isBestCard ? -15 : 0) // Slight upward movement for best cards
+                                    .zIndex(isBestCard ? 1 : 0)
                                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards)
                             }
                         }
-                        .padding(.horizontal, 20) // Add padding to prevent cards from touching screen edges
-                        .padding(.vertical, 10) // Add vertical padding to prevent truncation
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 15) // More vertical padding
                     }
-                    .frame(height: 130) // Increased height to accommodate the offset
+                    .frame(height: 140) // Adjusted height for better spacing
                 }
-                .padding(.vertical, 8)
+                .padding(.top, 2)
+                .padding(.bottom, 10)
                 .background(Color.black.opacity(0.2))
                 .cornerRadius(10)
                 .padding(.horizontal)
+                .padding(.top, 10) // Add some space between sections
                 
                 Spacer()
                 
@@ -44,24 +46,27 @@ struct GameView: View {
                         .font(.headline)
                         .foregroundColor(.white)
                     
-                    HStack(spacing: -20) { // Negative spacing to make cards overlap
+                    HStack(spacing: -20) { // Negative spacing to make cards overlap more
                         ForEach(viewModel.playerHand.cards) { card in
                             let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
                             CardView(card: card)
-                                .scaleEffect(0.85) // Slightly smaller than community cards
-                                .offset(y: isBestCard ? -20 : 0)
-                                .zIndex(isBestCard ? 1 : 0) // Use a simple z-index for best cards
+                                .scaleEffect(0.9) // Slightly larger to match community cards
+                                .offset(y: isBestCard ? -25 : 10) // Move up more when highlighted, otherwise slightly down
+                                .zIndex(isBestCard ? 1 : 0)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards)
                         }
                     }
-                    .frame(height: 120) // Increased height to accommodate the offset
-                    .padding(.horizontal, 20) // Add horizontal padding
-                    .padding(.vertical, 10) // Add vertical padding to prevent truncation
+                    .frame(height: 140) // Increased height for better spacing
+                    .padding(.horizontal, 20)
+                    .padding(.top, 5) // Less top padding to bring cards up slightly
+                    .padding(.bottom, 15) // More bottom padding
                 }
-                .padding(.vertical, 8)
+                .padding(.top, 2)
+                .padding(.bottom, 10)
                 .background(Color.black.opacity(0.2))
                 .cornerRadius(10)
                 .padding(.horizontal)
+                .padding(.top, 10) // Add some space between sections
                 
                 // Game controls
                 VStack(spacing: 15) {
