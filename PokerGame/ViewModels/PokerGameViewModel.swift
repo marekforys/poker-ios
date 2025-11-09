@@ -31,7 +31,7 @@ class PokerGameViewModel: ObservableObject {
         handEvaluation = nil
         
         // Deal initial cards and make them face up
-        if var card1 = deck.deal(), var card2 = deck.deal() {
+        if let card1 = deck.deal(), let card2 = deck.deal() {
             card1.isFaceUp = true
             card2.isFaceUp = true
             playerHand.addCard(card1)
@@ -57,7 +57,7 @@ class PokerGameViewModel: ObservableObject {
         _ = deck.deal()
         
         // Deal turn (1 card)
-        if var card = deck.deal() {
+        if let card = deck.deal() {
             card.isFaceUp = true
             communityCards.append(card)
             gameState = .turn
@@ -71,7 +71,7 @@ class PokerGameViewModel: ObservableObject {
         _ = deck.deal()
         
         // Deal river (1 card)
-        if var card = deck.deal() {
+        if let card = deck.deal() {
             card.isFaceUp = true
             communityCards.append(card)
             gameState = .river

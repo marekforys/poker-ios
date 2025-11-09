@@ -22,17 +22,23 @@ enum Rank: Int, CaseIterable {
     }
 }
 
-struct Card: Identifiable, Equatable {
+final class Card: Identifiable, Equatable {
     let id = UUID()
     let rank: Rank
     let suit: Suit
     var isFaceUp: Bool = false
     
+    init(rank: Rank, suit: Suit, isFaceUp: Bool = false) {
+        self.rank = rank
+        self.suit = suit
+        self.isFaceUp = isFaceUp
+    }
+    
     var description: String {
         return "\(rank.description)\(suit.rawValue)"
     }
     
-    mutating func flip() {
+    func flip() {
         isFaceUp.toggle()
     }
     

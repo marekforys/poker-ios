@@ -63,7 +63,7 @@ struct Hand: Identifiable, Equatable {
         
         // Sort cards by rank in descending order with indices
         let sortedCards = cards.enumerated().sorted { $0.element.rank.rawValue > $1.element.rank.rawValue }
-        let sortedIndices = sortedCards.map { $0.offset }
+        _ = sortedCards.map { $0.offset }
         let sortedCardValues = sortedCards.map { $0.element }
         
         // Check for Royal Flush

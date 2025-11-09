@@ -4,7 +4,7 @@ import Testing
 // MARK: - Test Helpers
 
 extension Card {
-    init(rank: Rank, suit: Suit) {
+    convenience init(rank: Rank, suit: Suit) {
         self.init(rank: rank, suit: suit, isFaceUp: true)
     }
 }
