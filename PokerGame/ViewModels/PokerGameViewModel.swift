@@ -7,6 +7,7 @@ class PokerGameViewModel: ObservableObject {
     @Published private(set) var communityCards: [Card] = []
     @Published private(set) var gameState: GameState = .notStarted
     @Published private(set) var handEvaluation: HandEvaluation?
+    @Published private(set) var bestHandCards: [Card] = []
     
     enum GameState {
         case notStarted
@@ -81,13 +82,19 @@ class PokerGameViewModel: ObservableObject {
     private func evaluateHand() {
         let allCards = playerHand.cards + communityCards
         
-        // Create a new hand with just the best 5 cards
-        let bestHand = findBestHand(from: allCards)
-        playerHand = bestHand
-        
-        // Evaluate the best hand
-        handEvaluation = bestHand.evaluate()
-        gameState = .gameOver
+        if allCards.count >= 5 {
+            // For 5 or more cards, find the best 5-card hand
+            let bestHand = findBestHand(from: allCards)
+            playerHand = bestHand
+            handEvaluation = bestHand.evaluate()
+            
+            // Update best hand cards based on evaluation
+            if let evaluation = handEvaluation {
+                bestHandCards = evaluation.cardIndices.map { allCards[$0] }
+            }
+            
+            gameState = .gameOver
+        }
     }
     
     private func findBestHand(from cards: [Card]) -> Hand {
@@ -124,17 +131,17 @@ class PokerGameViewModel: ObservableObject {
         case .flush: return "Flush"
         case .straight: return "Straight"
         case .threeOfAKind: return "Three of a Kind"
-        case .twoPair: 
+        case .twoPair:
             if evaluation.highCards.count >= 2 {
                 return "Two Pair: \(evaluation.highCards[0].description)s & \(evaluation.highCards[1].description)s"
             }
             return "Two Pair"
-        case .onePair: 
+        case .onePair:
             if !evaluation.highCards.isEmpty {
                 return "Pair of \(evaluation.highCards[0].description)s"
             }
             return "One Pair"
-        case .highCard: 
+        case .highCard:
             if !evaluation.highCards.isEmpty {
                 return "High Card: \(evaluation.highCards[0].description)"
             }
@@ -142,3 +149,6 @@ class PokerGameViewModel: ObservableObject {
         }
     }
 }
+
+
+// Array combinations extension is now in Array+Combinations.swift

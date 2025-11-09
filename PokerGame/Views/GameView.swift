@@ -18,14 +18,18 @@ struct GameView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: -15) { // Negative spacing to make cards overlap slightly
                             ForEach(viewModel.communityCards) { card in
+                                let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
                                 CardView(card: card)
                                     .scaleEffect(0.9) // Slightly smaller cards to fit better
-                                    .zIndex(Double(viewModel.communityCards.firstIndex(where: { $0.id == card.id }) ?? 0))
+                                    .offset(y: isBestCard ? -20 : 0)
+                                    .zIndex(isBestCard ? 1 : 0) // Use a simple z-index for best cards
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards)
                             }
                         }
                         .padding(.horizontal, 20) // Add padding to prevent cards from touching screen edges
+                        .padding(.vertical, 10) // Add vertical padding to prevent truncation
                     }
-                    .frame(height: 110) // Slightly reduced height to fit better
+                    .frame(height: 130) // Increased height to accommodate the offset
                 }
                 .padding(.vertical, 8)
                 .background(Color.black.opacity(0.2))
@@ -42,13 +46,17 @@ struct GameView: View {
                     
                     HStack(spacing: -20) { // Negative spacing to make cards overlap
                         ForEach(viewModel.playerHand.cards) { card in
+                            let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
                             CardView(card: card)
                                 .scaleEffect(0.85) // Slightly smaller than community cards
-                                .zIndex(Double(viewModel.playerHand.cards.firstIndex(where: { $0.id == card.id }) ?? 0))
+                                .offset(y: isBestCard ? -20 : 0)
+                                .zIndex(isBestCard ? 1 : 0) // Use a simple z-index for best cards
+                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards)
                         }
                     }
-                    .frame(height: 100) // Reduced height for player's cards
+                    .frame(height: 120) // Increased height to accommodate the offset
                     .padding(.horizontal, 20) // Add horizontal padding
+                    .padding(.vertical, 10) // Add vertical padding to prevent truncation
                 }
                 .padding(.vertical, 8)
                 .background(Color.black.opacity(0.2))
@@ -57,14 +65,24 @@ struct GameView: View {
                 
                 // Game controls
                 VStack(spacing: 15) {
-                    if viewModel.handEvaluation != nil {
-                        Text("\(viewModel.getHandRankString())")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(10)
+                    if let evaluation = viewModel.handEvaluation {
+                        VStack(spacing: 10) {
+                            Text(viewModel.getHandRankString())
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            if evaluation.rank == .highCard, !evaluation.highCards.isEmpty {
+                                // Create a card view for the high card
+                                let highCard = evaluation.highCards[0]
+                                let card = Card(rank: highCard, suit: .hearts, isFaceUp: true) // Suit is arbitrary for display
+                                CardView(card: card)
+                                    .scaleEffect(0.6)
+                            }
+                        }
+                        .padding()
+                        .background(Color.black.opacity(0.3))
+                        .cornerRadius(10)
                     }
                     
                     Button(action: {
