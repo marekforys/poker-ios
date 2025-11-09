@@ -3,20 +3,14 @@ import Testing
 
 // MARK: - Test Helpers
 
-extension Card {
-    convenience init(rank: Rank, suit: Suit) {
-        self.init(rank: rank, suit: suit, isFaceUp: true)
-    }
-}
-
 extension Hand {
     mutating func addCards(_ ranks: [Rank], suit: Suit = .hearts) {
-        let cards = ranks.map { Card(rank: $0, suit: suit) }
+        let cards = ranks.map { Card(rank: $0, suit: suit, isFaceUp: true) }
         self.addCards(cards)
     }
     
     mutating func addCards(_ cardTuples: [(rank: Rank, suit: Suit)]) {
-        let cards = cardTuples.map { Card(rank: $0.rank, suit: $0.suit) }
+        let cards = cardTuples.map { Card(rank: $0.rank, suit: $0.suit, isFaceUp: true) }
         self.addCards(cards)
     }
     
@@ -25,7 +19,7 @@ extension Hand {
         let suits = suits ?? Array(repeating: .hearts, count: ranks.count)
         for (index, rank) in ranks.enumerated() {
             let suit = suits[index % suits.count]
-            hand.addCard(Card(rank: rank, suit: suit))
+            hand.addCard(Card(rank: rank, suit: suit, isFaceUp: true))
         }
         return hand
     }
