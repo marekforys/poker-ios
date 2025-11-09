@@ -4,18 +4,18 @@ import Testing
 // MARK: - Test Helpers
 
 extension Hand {
-    mutating func addCards(_ ranks: [Rank], suit: Suit = .hearts) {
+    func addCards(_ ranks: [Rank], suit: Suit = .hearts) {
         let cards = ranks.map { Card(rank: $0, suit: suit, isFaceUp: true) }
         self.addCards(cards)
     }
     
-    mutating func addCards(_ cardTuples: [(rank: Rank, suit: Suit)]) {
+    func addCards(_ cardTuples: [(rank: Rank, suit: Suit)]) {
         let cards = cardTuples.map { Card(rank: $0.rank, suit: $0.suit, isFaceUp: true) }
         self.addCards(cards)
     }
     
     static func createHand(ranks: [Rank], suits: [Suit]? = nil) -> Hand {
-        var hand = Hand()
+        let hand = Hand()
         let suits = suits ?? Array(repeating: .hearts, count: ranks.count)
         for (index, rank) in ranks.enumerated() {
             let suit = suits[index % suits.count]

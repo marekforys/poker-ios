@@ -35,20 +35,24 @@ struct HandEvaluation: Equatable {
     }
 }
 
-struct Hand: Identifiable, Equatable {
-    let id = UUID()
-    
+final class Hand: Equatable {
     private(set) var cards: [Card] = []
     
-    mutating func addCard(_ card: Card) {
+    init() {}
+    
+    init(cards: [Card]) {
+        self.cards = cards
+    }
+    
+    func addCard(_ card: Card) {
         cards.append(card)
     }
     
-    mutating func addCards(_ newCards: [Card]) {
+    func addCards(_ newCards: [Card]) {
         cards.append(contentsOf: newCards)
     }
     
-    mutating func removeAll() {
+    func removeAll() {
         cards.removeAll()
     }
     
@@ -364,7 +368,6 @@ struct Hand: Identifiable, Equatable {
     }
     
     static func == (lhs: Hand, rhs: Hand) -> Bool {
-        return lhs.id == rhs.id &&
-               lhs.cards == rhs.cards
+        return lhs.cards == rhs.cards
     }
 }
