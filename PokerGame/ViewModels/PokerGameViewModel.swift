@@ -107,7 +107,7 @@ class PokerGameViewModel: ObservableObject {
         let combinations = cards.combinations(of: 5)
         
         for combination in combinations {
-            var tempHand = Hand()
+            let tempHand = Hand()
             tempHand.addCards(combination)
             let evaluation = tempHand.evaluate()
             
