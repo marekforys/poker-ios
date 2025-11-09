@@ -85,7 +85,7 @@ class PokerGameViewModel: ObservableObject {
         if allCards.count >= 5 {
             // For 5 or more cards, find the best 5-card hand
             let bestHand = findBestHand(from: allCards)
-            playerHand = bestHand
+            //playerHand = bestHand
             handEvaluation = bestHand.evaluate()
             
             // Update best hand cards based on evaluation
@@ -133,12 +133,12 @@ class PokerGameViewModel: ObservableObject {
         case .threeOfAKind: return "Three of a Kind"
         case .twoPair:
             if evaluation.highCards.count >= 2 {
-                return "Two Pair: \(evaluation.highCards[0].description)s & \(evaluation.highCards[1].description)s"
+                return "Two Pair: \(evaluation.highCards[0].rank.description)s & \(evaluation.highCards[2].rank.description)s"
             }
             return "Two Pair"
         case .onePair:
             if !evaluation.highCards.isEmpty {
-                return "Pair of \(evaluation.highCards[0].description)s"
+                return "Pair of \(evaluation.highCards[0].rank.description)s"
             }
             return "One Pair"
         case .highCard:

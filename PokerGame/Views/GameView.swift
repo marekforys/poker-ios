@@ -21,7 +21,7 @@ struct GameView: View {
                                 let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
                                 CardView(card: card)
                                     .scaleEffect(0.9) // Slightly smaller cards to fit better
-                                    .offset(y: isBestCard ? -15 : 0) // Slight upward movement for best cards
+                                    .offset(y: isBestCard ? 20 : 0) // Slight upward movement for best cards
                                     .zIndex(isBestCard ? 1 : 0)
                                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards)
                             }
@@ -51,7 +51,7 @@ struct GameView: View {
                             let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
                             CardView(card: card)
                                 .scaleEffect(0.9) // Slightly larger to match community cards
-                                .offset(y: isBestCard ? -25 : 10) // Move up more when highlighted, otherwise slightly down
+                                .offset(y: isBestCard ? 30 : 10) // Move up more when highlighted, otherwise slightly down
                                 .zIndex(isBestCard ? 1 : 0)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards)
                         }
