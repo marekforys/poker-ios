@@ -84,47 +84,55 @@ class Dealer {
     
     func makeDecision(communityCards: [Card]) -> DealerAction {
         let handStrength = calculateHandStrength(communityCards: communityCards)
+        let potential = calculatePotentialStrength(communityCards: communityCards)
         
-        // Base thresholds (more aggressive)
-        var callThreshold = 0.5  // 50% of hands will be played
-        var strongHandThreshold = 0.7
+        // More aggressive base thresholds
+        var callThreshold = 0.3  // 70% of hands will be played
+        var strongHandThreshold = 0.6
+        var bluffChance = 0.15  // 15% chance to bluff
         
         // Adjust thresholds based on game phase
         switch communityCards.count {
-        case 0: // Pre-flop
-            // Play more hands pre-flop (60%)
-            callThreshold = 0.4
-            strongHandThreshold = 0.6
+        case 0: // Pre-flop - play very aggressively
+            callThreshold = 0.2  // 80% of hands played pre-flop
+            strongHandThreshold = 0.5
+            bluffChance = 0.05  // Less bluffing pre-flop
         case 3: // Flop
-            callThreshold = 0.5
-            strongHandThreshold = 0.65
+            callThreshold = 0.3
+            strongHandThreshold = 0.55
+            bluffChance = 0.15
         case 4: // Turn
-            callThreshold = 0.55
-            strongHandThreshold = 0.7
-        case 5: // River
-            // Most aggressive on river
-            callThreshold = 0.6
-            strongHandThreshold = 0.8
+            callThreshold = 0.35
+            strongHandThreshold = 0.6
+            bluffChance = 0.2  // More bluffing on turn
+        case 5: // River - most aggressive
+            callThreshold = 0.4
+            strongHandThreshold = 0.65
+            bluffChance = 0.25  // Most bluffing on river
         default:
             break
         }
         
-        // Add some randomness (less random, more consistent)
-        let randomFactor = Double.random(in: -0.05...0.05)
-        let adjustedThreshold = max(0.2, min(0.9, callThreshold + randomFactor))
+        // Adjust for potential (e.g., draws)
+        let adjustedStrength = (handStrength * 0.7) + (potential * 0.3)
+        
+        // Add some controlled randomness
+        let randomFactor = Double.random(in: -0.1...0.1)
+        let adjustedThreshold = max(0.15, min(0.85, callThreshold + randomFactor))
         
         // Always call with strong hands
         if handStrength > strongHandThreshold {
             return .call
         }
         
-        // Call with decent hands above threshold
-        if handStrength > adjustedThreshold {
+        // Call with decent hands or good potential
+        if adjustedStrength > adjustedThreshold {
             return .call
         }
         
-        // Small chance to bluff with weak hands (5%)
-        if handStrength > 0.15 && Double.random(in: 0...1) < 0.05 {
+        // Chance to semi-bluff with draws or bluff with weak hands
+        if (potential > 0.3 && Double.random(in: 0...1) < 0.7) || 
+           (handStrength > 0.1 && Double.random(in: 0...1) < bluffChance) {
             return .call
         }
         
