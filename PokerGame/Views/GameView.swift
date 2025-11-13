@@ -8,7 +8,37 @@ struct GameView: View {
             // Background
             Color.green.edgesIgnoringSafeArea(.all)
             
-            VStack(spacing: 20) {
+            VStack(spacing: 12) {
+                // Game status
+                Text(viewModel.gameState.description)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.black.opacity(0.3))
+                
+                // Dealer's hand
+                VStack(spacing: 8) {
+                    Text("Dealer's Hand")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    HStack(spacing: -20) {
+                        ForEach(viewModel.dealer.hand.cards) { card in
+                            let isBestCard = viewModel.dealerBestHandCards.contains { $0.id == card.id }
+                            CardView(card: card)
+                                .scaleEffect(0.8)
+                                .offset(y: isBestCard ? -15 : 0)
+                                .zIndex(isBestCard ? 1 : 0)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.dealerBestHandCards)
+                        }
+                    }
+                    .frame(height: 120)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                }
+                .padding(.horizontal)
+                
                 // Community cards
                 VStack(spacing: 8) {
                     Text("Community Cards")
@@ -16,29 +46,43 @@ struct GameView: View {
                         .foregroundColor(.white)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: -15) { // Negative spacing to make cards overlap slightly
+                        HStack(spacing: -15) {
                             ForEach(viewModel.communityCards) { card in
-                                let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
+                                let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id } || 
+                                               viewModel.dealerBestHandCards.contains { $0.id == card.id }
                                 CardView(card: card)
-                                    .scaleEffect(0.9) // Slightly smaller cards to fit better
-                                    .offset(y: isBestCard ? 20 : 0) // Slight upward movement for best cards
+                                    .scaleEffect(0.8)
+                                    .offset(y: isBestCard ? 10 : 0)
                                     .zIndex(isBestCard ? 1 : 0)
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards)
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards + viewModel.dealerBestHandCards)
                             }
                         }
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 15) // More vertical padding
+                        .padding(.vertical, 10)
                     }
-                    .frame(height: 140) // Adjusted height for better spacing
+                    .frame(height: 120)
                 }
-                .padding(.top, 2)
-                .padding(.bottom, 10)
-                .background(Color.black.opacity(0.2))
-                .cornerRadius(10)
                 .padding(.horizontal)
-                .padding(.top, 10) // Add some space between sections
                 
                 Spacer()
+                
+                // Game result
+                if let result = viewModel.gameResult {
+                    VStack(spacing: 10) {
+                        Text(viewModel.getGameResultString())
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                            .background(Color.black.opacity(0.5))
+                            .cornerRadius(10)
+                            .padding(.horizontal)
+                            .transition(.opacity)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                }
                 
                 // Player's hand
                 VStack(spacing: 8) {
@@ -46,43 +90,35 @@ struct GameView: View {
                         .font(.headline)
                         .foregroundColor(.white)
                     
-                    HStack(spacing: -20) { // Negative spacing to make cards overlap more
+                    HStack(spacing: -20) {
                         ForEach(viewModel.playerHand.cards) { card in
                             let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
                             CardView(card: card)
-                                .scaleEffect(0.9) // Slightly larger to match community cards
-                                .offset(y: isBestCard ? -20 : 10) // Move up more when highlighted, otherwise slightly down
+                                .scaleEffect(0.8)
+                                .offset(y: isBestCard ? -15 : 0)
                                 .zIndex(isBestCard ? 1 : 0)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.bestHandCards)
                         }
                     }
-                    .frame(height: 140) // Increased height for better spacing
+                    .frame(height: 120)
                     .padding(.horizontal, 20)
-                    .padding(.top, 5) // Less top padding to bring cards up slightly
-                    .padding(.bottom, 15) // More bottom padding
+                    .padding(.vertical, 10)
                 }
-                .padding(.top, 2)
-                .padding(.bottom, 10)
-                .background(Color.black.opacity(0.2))
-                .cornerRadius(10)
                 .padding(.horizontal)
-                .padding(.top, 10) // Add some space between sections
                 
                 // Game controls
                 VStack(spacing: 15) {
-                    if let evaluation = viewModel.handEvaluation {
-                        VStack(spacing: 10) {
-                            Text(viewModel.getHandRankString())
-                                .font(.title2)
-                                .fontWeight(.bold)
+                    // Hand evaluation
+                    if let evaluation = viewModel.handEvaluation, viewModel.gameState == .gameOver {
+                        VStack(spacing: 8) {
+                            Text("Your hand: \(viewModel.getHandRankString())")
+                                .font(.headline)
                                 .foregroundColor(.white)
                             
-                            if evaluation.rank == .highCard, !evaluation.highCards.isEmpty {
-                                // Create a card view for the high card
-                                let highCard = evaluation.highCards[0]
-                                //highCard.isFaceUp = true
-                                CardView(card: highCard)
-                                    .scaleEffect(0.6)
+                            if viewModel.showDealerCards {
+                                Text("Dealer's hand: \(viewModel.getDealerHandRankString())")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
                             }
                         }
                         .padding()
@@ -90,33 +126,59 @@ struct GameView: View {
                         .cornerRadius(10)
                     }
                     
-                    Button(action: {
-                        switch viewModel.gameState {
-                        case .notStarted, .gameOver:
-                            viewModel.startNewGame()
-                        case .dealing:
-                            viewModel.dealFlop()
-                        case .flop:
-                            viewModel.dealTurn()
-                        case .turn:
-                            viewModel.dealRiver()
-                        case .river:
-                            break
+                    // Action buttons
+                    if viewModel.gameState == .playerTurn {
+                        HStack(spacing: 20) {
+                            Button(action: {
+                                viewModel.playerCalls()
+                            }) {
+                                Text("Call")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.blue)
+                                    .cornerRadius(10)
+                            }
+                            
+                            Button(action: {
+                                viewModel.playerFolds()
+                            }) {
+                                Text("Fold")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.red)
+                                    .cornerRadius(10)
+                            }
                         }
-                    }) {
-                        Text(buttonText())
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(buttonColor())
-                            .cornerRadius(10)
+                        .padding(.horizontal)
+                    } else {
+                        Button(action: {
+                            switch viewModel.gameState {
+                            case .notStarted, .gameOver:
+                                viewModel.startNewGame()
+                            case .dealing, .flop, .turn, .river:
+                                viewModel.proceedToNextState()
+                            default:
+                                break
+                            }
+                        }) {
+                            Text(buttonText())
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(buttonColor())
+                                .cornerRadius(10)
+                        }
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
                 }
-                .padding(.bottom, 30)
+                .padding(.bottom, 20)
             }
-            .padding(.top, 40)
+            .padding(.top, 20)
         }
     }
     
@@ -131,7 +193,11 @@ struct GameView: View {
         case .turn:
             return "Deal River"
         case .river:
-            return "Show Hand"
+            return "Show Down"
+        case .playerTurn:
+            return "Your Turn"
+        case .dealerTurn:
+            return "Dealer's Turn"
         }
     }
     
@@ -139,7 +205,7 @@ struct GameView: View {
         switch viewModel.gameState {
         case .notStarted, .gameOver:
             return .blue
-        case .dealing, .flop, .turn, .river:
+        case .dealing, .flop, .turn, .river, .playerTurn, .dealerTurn:
             return .orange
         }
     }

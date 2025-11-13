@@ -4,18 +4,47 @@ import Combine
 class PokerGameViewModel: ObservableObject {
     @Published private(set) var deck = Deck()
     @Published private(set) var playerHand = Hand()
+    @Published private(set) var dealer = Dealer()
     @Published private(set) var communityCards: [Card] = []
     @Published private(set) var gameState: GameState = .notStarted
     @Published private(set) var handEvaluation: HandEvaluation?
+    @Published private(set) var dealerHandEvaluation: HandEvaluation?
     @Published private(set) var bestHandCards: [Card] = []
+    @Published private(set) var dealerBestHandCards: [Card] = []
+    @Published private(set) var gameResult: GameResult?
+    @Published private(set) var dealerAction: DealerAction?
+    @Published var showDealerCards = false
     
-    enum GameState {
+    enum GameState: Equatable {
         case notStarted
         case dealing
+        case playerTurn
+        case dealerTurn
         case flop
         case turn
         case river
         case gameOver
+        
+        var description: String {
+            switch self {
+            case .notStarted: return "Not Started"
+            case .dealing: return "Dealing"
+            case .playerTurn: return "Your Turn"
+            case .dealerTurn: return "Dealer's Turn"
+            case .flop: return "Flop"
+            case .turn: return "Turn"
+            case .river: return "River"
+            case .gameOver: return "Game Over"
+            }
+        }
+    }
+    
+    enum GameResult: Equatable {
+        case playerWins
+        case dealerWins
+        case tie
+        case playerFolded
+        case dealerFolded
     }
     
     init() {
@@ -26,21 +55,110 @@ class PokerGameViewModel: ObservableObject {
         deck = Deck()
         deck.shuffle()
         playerHand = Hand()
+        dealer = Dealer()
         communityCards = []
         gameState = .dealing
         handEvaluation = nil
+        dealerHandEvaluation = nil
+        gameResult = nil
+        dealerAction = nil
+        showDealerCards = false
         
-        // Deal initial cards and make them face up
+        // Deal initial cards to player and dealer
+        dealInitialCards()
+        
+        // After dealing, it's player's turn
+        gameState = .playerTurn
+    }
+    
+    private func dealInitialCards() {
+        // Deal to player
         if let card1 = deck.deal(), let card2 = deck.deal() {
             card1.isFaceUp = true
             card2.isFaceUp = true
             playerHand.addCard(card1)
             playerHand.addCard(card2)
         }
+        
+        // Deal to dealer (face down)
+        if let card1 = deck.deal(), let card2 = deck.deal() {
+            card1.isFaceUp = false
+            card2.isFaceUp = false
+            dealer.addCard(card1)
+            dealer.addCard(card2)
+        }
+    }
+    
+    func playerCalls() {
+        // For simplicity, just proceed to dealer's turn
+        gameState = .dealerTurn
+        dealerMakesDecision()
+    }
+    
+    func playerFolds() {
+        gameResult = .playerFolded
+        gameState = .gameOver
+        showDealerCards = true
+        revealDealerCards()
+    }
+    
+    private func dealerMakesDecision() {
+        // Simple AI decision making
+        let action = dealer.makeDecision(communityCards: communityCards)
+        dealerAction = action
+        
+        // Add a small delay to make it feel more natural
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+            
+            switch action {
+            case .call:
+                // Dealer calls, continue with the game
+                if self.communityCards.isEmpty {
+                    // If no community cards, deal the flop
+                    self.dealFlop()
+                } else {
+                    // Otherwise proceed to next phase
+                    self.proceedToNextState()
+                }
+                
+                // If we're still in dealer's turn after proceeding, it means it's back to player
+                if self.gameState == .dealerTurn {
+                    self.gameState = .playerTurn
+                }
+                
+            case .fold:
+                // Dealer folds, player wins
+                self.gameResult = .dealerFolded
+                self.gameState = .gameOver
+                self.showDealerCards = true
+                self.revealDealerCards()
+            }
+        }
+    }
+    
+    func proceedToNextState() {
+        switch gameState {
+        case .dealing:
+            dealFlop()
+        case .flop:
+            dealTurn()
+        case .turn:
+            dealRiver()
+        case .river:
+            evaluateFinalHands()
+        default:
+            break
+        }
+    }
+    
+    private func revealDealerCards() {
+        // Reveal dealer's cards
+        dealer.hand.cards.forEach { $0.isFaceUp = true }
     }
     
     func dealFlop() {
-        guard gameState == .dealing else { return }
+        guard gameState == .dealing || gameState == .dealerTurn else { return }
         
         // Burn a card
         _ = deck.deal()
@@ -48,10 +166,13 @@ class PokerGameViewModel: ObservableObject {
         // Deal flop (3 cards)
         communityCards.append(contentsOf: deck.dealCards(count: 3))
         gameState = .flop
+        
+        // After flop, it's player's turn again
+        gameState = .playerTurn
     }
     
     func dealTurn() {
-        guard gameState == .flop else { return }
+        guard gameState == .flop || gameState == .dealerTurn else { return }
         
         // Burn a card
         _ = deck.deal()
@@ -61,11 +182,14 @@ class PokerGameViewModel: ObservableObject {
             card.isFaceUp = true
             communityCards.append(card)
             gameState = .turn
+            
+            // After turn, it's player's turn again
+            gameState = .playerTurn
         }
     }
     
     func dealRiver() {
-        guard gameState == .turn else { return }
+        guard gameState == .turn || gameState == .dealerTurn else { return }
         
         // Burn a card
         _ = deck.deal()
@@ -75,7 +199,60 @@ class PokerGameViewModel: ObservableObject {
             card.isFaceUp = true
             communityCards.append(card)
             gameState = .river
-            evaluateHand()
+            
+            // After river, it's player's turn again
+            gameState = .playerTurn
+        }
+    }
+    
+    func evaluateFinalHands() {
+        // Show all dealer's cards
+        showDealerCards = true
+        revealDealerCards()
+        
+        // Evaluate player's hand
+        let playerAllCards = playerHand.cards + communityCards
+        if playerAllCards.count >= 5 {
+            let playerBestHand = findBestHand(from: playerAllCards)
+            handEvaluation = playerBestHand.evaluate()
+            bestHandCards = handEvaluation?.highCards ?? []
+        }
+        
+        // Evaluate dealer's hand
+        let dealerAllCards = dealer.hand.cards + communityCards
+        if dealerAllCards.count >= 5 {
+            let dealerBestHand = findBestHand(from: dealerAllCards)
+            dealerHandEvaluation = dealerBestHand.evaluate()
+            dealerBestHandCards = dealerHandEvaluation?.highCards ?? []
+        }
+        
+        // Determine the winner
+        determineWinner()
+        gameState = .gameOver
+    }
+    
+    private func determineWinner() {
+        guard let playerEval = handEvaluation, let dealerEval = dealerHandEvaluation else {
+            gameResult = .tie
+            return
+        }
+        
+        if playerEval.rank.rawValue > dealerEval.rank.rawValue {
+            gameResult = .playerWins
+        } else if dealerEval.rank.rawValue > playerEval.rank.rawValue {
+            gameResult = .dealerWins
+        } else {
+            // Same rank, compare high cards
+            for (playerCard, dealerCard) in zip(playerEval.highCards, dealerEval.highCards) {
+                if playerCard.rank.rawValue > dealerCard.rank.rawValue {
+                    gameResult = .playerWins
+                    return
+                } else if dealerCard.rank.rawValue > playerCard.rank.rawValue {
+                    gameResult = .dealerWins
+                    return
+                }
+            }
+            gameResult = .tie
         }
     }
     
@@ -85,15 +262,12 @@ class PokerGameViewModel: ObservableObject {
         if allCards.count >= 5 {
             // For 5 or more cards, find the best 5-card hand
             let bestHand = findBestHand(from: allCards)
-            //playerHand = bestHand
             handEvaluation = bestHand.evaluate()
             
             // Update best hand cards based on evaluation
             if let evaluation = handEvaluation {
                 bestHandCards = evaluation.highCards
             }
-            
-            gameState = .gameOver
         }
     }
     
@@ -122,30 +296,28 @@ class PokerGameViewModel: ObservableObject {
     
     func getHandRankString() -> String {
         guard let evaluation = handEvaluation else { return "" }
+        return evaluation.rank.description
+    }
+    
+    func getDealerHandRankString() -> String {
+        guard let evaluation = dealerHandEvaluation else { return "" }
+        return evaluation.rank.description
+    }
+    
+    func getGameResultString() -> String {
+        guard let result = gameResult else { return "" }
         
-        switch evaluation.rank {
-        case .royalFlush: return "Royal Flush"
-        case .straightFlush: return "Straight Flush"
-        case .fourOfAKind: return "Four of a Kind"
-        case .fullHouse: return "Full House"
-        case .flush: return "Flush"
-        case .straight: return "Straight"
-        case .threeOfAKind: return "Three of a Kind"
-        case .twoPair:
-            if evaluation.highCards.count >= 2 {
-                return "Two Pair: \(evaluation.highCards[0].rank.description)s & \(evaluation.highCards[2].rank.description)s"
-            }
-            return "Two Pair"
-        case .onePair:
-            if !evaluation.highCards.isEmpty {
-                return "Pair of \(evaluation.highCards[0].rank.description)s"
-            }
-            return "One Pair"
-        case .highCard:
-            if !evaluation.highCards.isEmpty {
-                return "High Card: \(evaluation.highCards[0].description)"
-            }
-            return "High Card"
+        switch result {
+        case .playerWins:
+            return "You win with \(getHandRankString())"
+        case .dealerWins:
+            return "Dealer wins with \(getDealerHandRankString())"
+        case .tie:
+            return "It's a tie!"
+        case .playerFolded:
+            return "You folded. Dealer wins!"
+        case .dealerFolded:
+            return "Dealer folded. You win!"
         }
     }
 }
