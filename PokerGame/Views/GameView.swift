@@ -159,8 +159,14 @@ struct GameView: View {
                             switch viewModel.gameState {
                             case .notStarted, .gameOver:
                                 viewModel.startNewGame()
-                            case .dealing, .flop, .turn, .river:
-                                viewModel.proceedToNextState()
+                            case .dealing:
+                                viewModel.dealFlop()
+                            case .flop:
+                                viewModel.dealTurn()
+                            case .turn:
+                                viewModel.dealRiver()
+                            case .river:
+                                viewModel.evaluateFinalHands()
                             default:
                                 break
                             }
@@ -212,7 +218,7 @@ struct GameView: View {
 }
 
 struct CardView: View {
-    let card: Card
+    @ObservedObject var card: Card
     private let cardWidth: CGFloat = 80
     private let cardHeight: CGFloat = 120
     private let cornerRadius: CGFloat = 8

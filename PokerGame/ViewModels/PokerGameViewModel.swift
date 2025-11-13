@@ -76,6 +76,16 @@ class PokerGameViewModel: ObservableObject {
         print("Initial cards dealt. Game state: \(gameState)")
     }
     
+    private func revealDealerCards() {
+        // Reveal all dealer's cards
+        for card in dealer.hand.cards {
+            card.isFaceUp = true
+        }
+        showDealerCards = true
+        // Force UI update
+        objectWillChange.send()
+    }
+    
     private func dealInitialCards() {
         // Deal to player
         if let card1 = deck.deal(), let card2 = deck.deal() {
@@ -92,128 +102,6 @@ class PokerGameViewModel: ObservableObject {
             dealer.addCard(card1)
             dealer.addCard(card2)
         }
-    }
-    
-    func playerCalls() {
-        print("Player calls. Current game state: \(gameState), community cards: \(communityCards.count)")
-        
-        if communityCards.isEmpty {
-            // If no community cards, deal the flop
-            print("Dealing flop...")
-            dealFlop()
-        } else {
-            // In test environment, just proceed to next phase
-            if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
-                print("In test environment, proceeding to next phase...")
-                switch gameState {
-                case .flop:
-                    gameState = .turn
-                case .turn:
-                    gameState = .river
-                case .river:
-                    evaluateFinalHands()
-                default:
-                    break
-                }
-            } else {
-                // In normal gameplay, it's the dealer's turn
-                print("Dealer's turn...")
-                gameState = .dealerTurn
-                dealerMakesDecision()
-            }
-        }
-        
-        print("After playerCalls, new game state: \(gameState)")
-    }
-    
-    func playerFolds() {
-        gameResult = .playerFolded
-        gameState = .gameOver
-        showDealerCards = true
-        revealDealerCards()
-    }
-    
-    // MARK: - Test Helpers
-    #if DEBUG
-    func test_setGameState(_ state: GameState) {
-        gameState = state
-    }
-    #endif
-    
-    func dealerMakesDecision() {
-        print("Dealer making decision...")
-        // Simple AI decision making
-        let action = dealer.makeDecision(communityCards: communityCards)
-        dealerAction = action
-        print("Dealer decided to: \(action)")
-        
-        // Add a small delay to make it feel more natural
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            
-            switch action {
-            case .call:
-                // Dealer calls, continue with the game
-                if self.communityCards.isEmpty {
-                    // If no community cards, deal the flop
-                    self.dealFlop()
-                } else {
-                    // Determine which phase to go to next
-                    switch self.communityCards.count {
-                    case 3:  // After flop, go to turn
-                        print("Dealer calls after flop, dealing turn...")
-                        self.dealTurn()
-                    case 4:  // After turn, go to river
-                        print("Dealer calls after turn, dealing river...")
-                        self.dealRiver()
-                    case 5:  // After river, show down
-                        print("Dealer calls after river, evaluating hands...")
-                        self.evaluateFinalHands()
-                    default:
-                        break
-                    }
-                }
-                
-            case .fold:
-                // Dealer folds, player wins
-                print("Dealer folds. Player wins!")
-                self.gameResult = .dealerFolded
-                self.gameState = .gameOver
-                self.showDealerCards = true
-                self.revealDealerCards()
-            }
-            
-            print("After dealer's decision, new game state: \(self.gameState)")
-            // Force UI update
-            self.objectWillChange.send()
-        }
-    }
-    
-    func proceedToNextState() {
-        switch gameState {
-        case .dealing:
-            // Shouldn't get here, but just in case
-            dealFlop()
-        case .flop:
-            // After flop, proceed to turn
-            dealTurn()
-        case .turn:
-            // After turn, proceed to river
-            dealRiver()
-        case .river:
-            // After river, evaluate hands
-            evaluateFinalHands()
-        case .dealerTurn:
-            // If dealer calls, it's player's turn again
-            gameState = .playerTurn
-        default:
-            break
-        }
-    }
-    
-    private func revealDealerCards() {
-        // Reveal dealer's cards
-        dealer.hand.cards.forEach { $0.isFaceUp = true }
     }
     
     func dealFlop() {
@@ -302,29 +190,36 @@ class PokerGameViewModel: ObservableObject {
     }
     
     func evaluateFinalHands() {
-        // Show all dealer's cards
-        showDealerCards = true
+        // Show dealer's cards
         revealDealerCards()
         
-        // Evaluate player's hand
-        let playerAllCards = playerHand.cards + communityCards
-        if playerAllCards.count >= 5 {
-            let playerBestHand = findBestHand(from: playerAllCards)
-            handEvaluation = playerBestHand.evaluate()
-            bestHandCards = handEvaluation?.highCards ?? []
+        // Small delay to show cards before evaluating
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            
+            // Evaluate player's hand
+            let playerAllCards = self.playerHand.cards + self.communityCards
+            if playerAllCards.count >= 5 {
+                let playerBestHand = self.findBestHand(from: playerAllCards)
+                self.handEvaluation = playerBestHand.evaluate()
+                self.bestHandCards = self.handEvaluation?.highCards ?? []
+            }
+            
+            // Evaluate dealer's hand
+            let dealerAllCards = self.dealer.hand.cards + self.communityCards
+            if dealerAllCards.count >= 5 {
+                let dealerBestHand = self.findBestHand(from: dealerAllCards)
+                self.dealerHandEvaluation = dealerBestHand.evaluate()
+                self.dealerBestHandCards = self.dealerHandEvaluation?.highCards ?? []
+            }
+            
+            // Determine the winner
+            self.determineWinner()
+            self.gameState = .gameOver
+            
+            // Force UI update to show results
+            self.objectWillChange.send()
         }
-        
-        // Evaluate dealer's hand
-        let dealerAllCards = dealer.hand.cards + communityCards
-        if dealerAllCards.count >= 5 {
-            let dealerBestHand = findBestHand(from: dealerAllCards)
-            dealerHandEvaluation = dealerBestHand.evaluate()
-            dealerBestHandCards = dealerHandEvaluation?.highCards ?? []
-        }
-        
-        // Determine the winner
-        determineWinner()
-        gameState = .gameOver
     }
     
     private func determineWinner() {
@@ -352,6 +247,123 @@ class PokerGameViewModel: ObservableObject {
         }
     }
     
+    private func findBestHand(from cards: [Card]) -> Hand {
+        guard cards.count >= 5 else { return Hand(cards: cards) }
+        
+        // Generate all possible 5-card combinations
+        var bestHand = Hand()
+        
+        // Check all possible 5-card combinations
+        for i in 0..<cards.count {
+            for j in i+1..<cards.count {
+                for k in j+1..<cards.count {
+                    for l in k+1..<cards.count {
+                        for m in l+1..<cards.count {
+                            let combination = [cards[i], cards[j], cards[k], cards[l], cards[m]]
+                            let hand = Hand(cards: combination)
+                            if bestHand.cards.isEmpty || hand > bestHand {
+                                bestHand = hand
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return bestHand
+    }
+    
+    func playerCalls() {
+        print("Player calls. Current game state: \(gameState), community cards: \(communityCards.count)")
+        
+        if communityCards.isEmpty {
+            // If no community cards, deal the flop
+            dealFlop()
+        } else {
+            // In test environment, just proceed to next phase
+            if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+                print("In test environment, proceeding to next phase...")
+                switch gameState {
+                case .flop:
+                    gameState = .turn
+                case .turn:
+                    gameState = .river
+                case .river:
+                    evaluateFinalHands()
+                default:
+                    break
+                }
+            } else {
+                // In normal gameplay, it's the dealer's turn
+                print("Dealer's turn...")
+                gameState = .dealerTurn
+                dealerMakesDecision()
+            }
+        }
+        
+        print("After playerCalls, new game state: \(gameState)")
+    }
+    
+    func playerFolds() {
+        // Show all dealer's cards when player folds
+        revealDealerCards()
+        
+        // Set game result and state
+        gameResult = .playerFolded
+        gameState = .gameOver
+    }
+    
+    func dealerMakesDecision() {
+        print("Dealer making decision...")
+        // Simple AI decision making
+        let action = dealer.makeDecision(communityCards: communityCards)
+        dealerAction = action
+        print("Dealer decided to: \(action)")
+        
+        // Add a small delay to make it feel more natural
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+            
+            switch action {
+            case .call:
+                // Dealer calls, continue with the game
+                if self.communityCards.isEmpty {
+                    // If no community cards, deal the flop
+                    self.dealFlop()
+                } else {
+                    // Determine which phase to go to next
+                    switch self.communityCards.count {
+                    case 3:  // After flop, go to turn
+                        print("Dealer calls after flop, dealing turn...")
+                        self.dealTurn()
+                    case 4:  // After turn, go to river
+                        print("Dealer calls after turn, dealing river...")
+                        self.dealRiver()
+                    case 5:  // After river, show down
+                        print("Dealer calls after river, evaluating hands...")
+                        self.evaluateFinalHands()
+                    default:
+                        break
+                    }
+                }
+                
+            case .fold:
+                // Dealer folds, player wins
+                print("Dealer folds. Player wins!")
+                self.gameResult = .dealerFolded
+                self.gameState = .gameOver
+                self.showDealerCards = true
+                self.revealDealerCards()
+            }
+            
+            print("After dealer's decision, new game state: \(self.gameState)")
+            // Force UI update
+            self.objectWillChange.send()
+        }
+    }
+    
+    
+    
     private func evaluateHand() {
         let allCards = playerHand.cards + communityCards
         
@@ -367,33 +379,19 @@ class PokerGameViewModel: ObservableObject {
         }
     }
     
-    private func findBestHand(from cards: [Card]) -> Hand {
-        guard cards.count >= 5 else { return Hand() }
-        
-        var bestHand = Hand()
-        var bestRank: HandRank = .highCard
-        
-        // Generate all possible 5-card combinations
-        let combinations = cards.combinations(of: 5)
-        
-        for combination in combinations {
-            let tempHand = Hand()
-            tempHand.addCards(combination)
-            let evaluation = tempHand.evaluate()
-            
-            if evaluation.rank >= bestRank {
-                bestRank = evaluation.rank
-                bestHand = tempHand
-            }
-        }
-        
-        return bestHand
-    }
+    
     
     func getHandRankString() -> String {
         guard let evaluation = handEvaluation else { return "" }
         return evaluation.rank.description
     }
+    
+    // MARK: - Test Helpers
+    #if DEBUG
+    func test_setGameState(_ state: GameState) {
+        self.gameState = state
+    }
+    #endif
     
     func getDealerHandRankString() -> String {
         guard let evaluation = dealerHandEvaluation else { return "" }
@@ -418,5 +416,4 @@ class PokerGameViewModel: ObservableObject {
     }
 }
 
-
-// Array combinations extension is now in Array+Combinations.swift
+// Using Array+Combinations extension from the project

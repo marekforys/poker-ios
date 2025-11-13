@@ -737,7 +737,7 @@ struct GameFlowTests {
     }
     
     @Test("Complete game flow")
-    func testCompleteGameFlow() {
+    func testCompleteGameFlow() async {
         let viewModel = PokerGameViewModel()
         
         // Initial state
@@ -773,8 +773,25 @@ struct GameFlowTests {
         viewModel.test_setGameState(.playerTurn)
         viewModel.playerCalls()
         
-        // Manually evaluate hands
+        // Start the evaluation
         viewModel.evaluateFinalHands()
+        
+        // Wait for the evaluation to complete with a timeout
+        let maxAttempts = 20 // 2 seconds total with 0.1s interval
+        var attempts = 0
+        
+        // Poll the state until we get the expected result or time out
+        while attempts < maxAttempts {
+            if viewModel.gameState == .gameOver && 
+               viewModel.handEvaluation != nil && 
+               viewModel.dealerHandEvaluation != nil {
+                break
+            }
+            attempts += 1
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        // Verify the results
         #expect(viewModel.gameState == .gameOver, "Game should be over after evaluating hands")
         #expect(viewModel.handEvaluation != nil, "Expected player hand evaluation")
         #expect(viewModel.dealerHandEvaluation != nil, "Expected dealer hand evaluation")

@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 enum Suit: String, CaseIterable {
     case hearts = "♥️"
@@ -22,11 +23,11 @@ enum Rank: Int, CaseIterable {
     }
 }
 
-final class Card: Identifiable, Equatable, Comparable {
+final class Card: Identifiable, Equatable, Comparable, ObservableObject {
     let id = UUID()
     let rank: Rank
     let suit: Suit
-    var isFaceUp: Bool = false
+    @Published var isFaceUp: Bool = false
     
     init(rank: Rank, suit: Suit, isFaceUp: Bool = false) {
         self.rank = rank
