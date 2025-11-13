@@ -55,6 +55,8 @@ class PokerGameViewModel: ObservableObject {
         print("Starting new game...")
         // Reset the game state
         deck = Deck()
+        // Shuffle the deck before dealing
+        deck.shuffle()
         playerHand = Hand()
         dealer = Dealer()
         communityCards = []
