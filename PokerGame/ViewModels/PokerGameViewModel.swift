@@ -52,20 +52,20 @@ class PokerGameViewModel: ObservableObject {
     }
     
     func startNewGame() {
+        print("Starting new game...")
+        // Reset the game state
         deck = Deck()
-        deck.shuffle()
         playerHand = Hand()
         dealer = Dealer()
         communityCards = []
         gameState = .dealing
-        handEvaluation = nil
-        dealerHandEvaluation = nil
         gameResult = nil
-        dealerAction = nil
         showDealerCards = false
         
-        // Deal initial cards to player and dealer
+        print("Game state reset, dealing initial cards...")
+        // Deal initial cards
         dealInitialCards()
+        print("Initial cards dealt. Game state: \(gameState)")
         
         // After dealing, it's player's turn
         gameState = .playerTurn
@@ -90,9 +90,20 @@ class PokerGameViewModel: ObservableObject {
     }
     
     func playerCalls() {
-        // For simplicity, just proceed to dealer's turn
-        gameState = .dealerTurn
-        dealerMakesDecision()
+        print("Player calls. Current game state: \(gameState), community cards: \(communityCards.count)")
+        
+        if communityCards.isEmpty {
+            // If no community cards, deal the flop
+            print("Dealing flop...")
+            dealFlop()
+        } else {
+            // Otherwise, it's the dealer's turn
+            print("Dealer's turn...")
+            gameState = .dealerTurn
+            dealerMakesDecision()
+        }
+        
+        print("After playerCalls, new game state: \(gameState)")
     }
     
     func playerFolds() {
@@ -103,9 +114,11 @@ class PokerGameViewModel: ObservableObject {
     }
     
     private func dealerMakesDecision() {
+        print("Dealer making decision...")
         // Simple AI decision making
         let action = dealer.makeDecision(communityCards: communityCards)
         dealerAction = action
+        print("Dealer decided to: \(action)")
         
         // Add a small delay to make it feel more natural
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
@@ -118,35 +131,54 @@ class PokerGameViewModel: ObservableObject {
                     // If no community cards, deal the flop
                     self.dealFlop()
                 } else {
-                    // Otherwise proceed to next phase
-                    self.proceedToNextState()
-                }
-                
-                // If we're still in dealer's turn after proceeding, it means it's back to player
-                if self.gameState == .dealerTurn {
-                    self.gameState = .playerTurn
+                    // Determine which phase to go to next
+                    switch self.communityCards.count {
+                    case 3:  // After flop, go to turn
+                        print("Dealer calls after flop, dealing turn...")
+                        self.dealTurn()
+                    case 4:  // After turn, go to river
+                        print("Dealer calls after turn, dealing river...")
+                        self.dealRiver()
+                    case 5:  // After river, show down
+                        print("Dealer calls after river, evaluating hands...")
+                        self.evaluateFinalHands()
+                    default:
+                        break
+                    }
                 }
                 
             case .fold:
                 // Dealer folds, player wins
+                print("Dealer folds. Player wins!")
                 self.gameResult = .dealerFolded
                 self.gameState = .gameOver
                 self.showDealerCards = true
                 self.revealDealerCards()
             }
+            
+            print("After dealer's decision, new game state: \(self.gameState)")
+            // Force UI update
+            self.objectWillChange.send()
         }
     }
     
     func proceedToNextState() {
         switch gameState {
         case .dealing:
+            // Shouldn't get here, but just in case
             dealFlop()
         case .flop:
+            // After flop, proceed to turn
             dealTurn()
         case .turn:
+            // After turn, proceed to river
             dealRiver()
         case .river:
+            // After river, evaluate hands
             evaluateFinalHands()
+        case .dealerTurn:
+            // If dealer calls, it's player's turn again
+            gameState = .playerTurn
         default:
             break
         }
@@ -158,50 +190,81 @@ class PokerGameViewModel: ObservableObject {
     }
     
     func dealFlop() {
-        guard gameState == .dealing || gameState == .dealerTurn else { return }
+        print("Dealing flop... Current game state: \(gameState)")
         
         // Burn a card
         _ = deck.deal()
         
         // Deal flop (3 cards)
-        communityCards.append(contentsOf: deck.dealCards(count: 3))
-        gameState = .flop
+        let flopCards = deck.dealCards(count: 3)
+        print("Dealing flop cards: \(flopCards)")
+        communityCards.append(contentsOf: flopCards)
         
-        // After flop, it's player's turn again
+        // Update game state to flop
+        gameState = .flop
+        print("Flop dealt. New game state: \(gameState)")
+        
+        // After flop, it's player's turn
         gameState = .playerTurn
+        print("Player's turn. New game state: \(gameState)")
+        
+        // Force UI update
+        objectWillChange.send()
     }
     
     func dealTurn() {
-        guard gameState == .flop || gameState == .dealerTurn else { return }
+        print("Dealing turn... Current game state: \(gameState)")
+        guard gameState == .flop || gameState == .dealerTurn else { 
+            print("Cannot deal turn - invalid game state: \(gameState)")
+            return 
+        }
         
         // Burn a card
         _ = deck.deal()
         
         // Deal turn (1 card)
-        if let card = deck.deal() {
-            card.isFaceUp = true
-            communityCards.append(card)
-            gameState = .turn
+        if let turnCard = deck.deal() {
+            print("Dealing turn card: \(turnCard)")
+            communityCards.append(turnCard)
             
-            // After turn, it's player's turn again
+            // Update game state to turn
+            gameState = .turn
+            print("Turn dealt. New game state: \(gameState)")
+            
+            // After turn, it's player's turn
             gameState = .playerTurn
+            print("Player's turn. New game state: \(gameState)")
+            
+            // Force UI update
+            objectWillChange.send()
         }
     }
     
     func dealRiver() {
-        guard gameState == .turn || gameState == .dealerTurn else { return }
+        print("Dealing river... Current game state: \(gameState)")
+        guard gameState == .turn || gameState == .dealerTurn else { 
+            print("Cannot deal river - invalid game state: \(gameState)")
+            return 
+        }
         
         // Burn a card
         _ = deck.deal()
         
         // Deal river (1 card)
-        if let card = deck.deal() {
-            card.isFaceUp = true
-            communityCards.append(card)
-            gameState = .river
+        if let riverCard = deck.deal() {
+            print("Dealing river card: \(riverCard)")
+            communityCards.append(riverCard)
             
-            // After river, it's player's turn again
+            // Update game state to river
+            gameState = .river
+            print("River dealt. New game state: \(gameState)")
+            
+            // After river, it's player's turn
             gameState = .playerTurn
+            print("Player's turn. New game state: \(gameState)")
+            
+            // Force UI update
+            objectWillChange.send()
         }
     }
     

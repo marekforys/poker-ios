@@ -11,35 +11,125 @@ class Dealer {
         hand.addCard(card)
     }
     
-    func shouldCall(communityCards: [Card]) -> Bool {
-        // Simple AI: Dealer will call if they have at least a pair or better
+    private func calculateHandStrength(communityCards: [Card]) -> Double {
+        guard !hand.cards.isEmpty else { return 0.0 }
+        
         let allCards = hand.cards + communityCards
-        guard allCards.count >= 2 else { return false }
         
-        let evaluation = hand.evaluate()
+        // If we have 5 or more cards total, evaluate the best 5-card hand
+        if allCards.count >= 5 {
+            // Create a temporary hand with all cards and evaluate it
+            let tempHand = Hand(cards: allCards)
+            let evaluation = tempHand.evaluate()
+            
+            // Base strength on the hand rank
+            var strength = Double(evaluation.rank.rawValue) / Double(HandRank.royalFlush.rawValue)
+            
+            // Adjust for high cards in the best hand
+            let highCardModifier = evaluation.highCards.prefix(2).reduce(0.0) { result, card in
+                result + (Double(card.rank.rawValue) / Double(Rank.ace.rawValue))
+            } / 2.0
+            
+            strength = (strength * 0.8) + (highCardModifier * 0.2)
+            return min(max(strength, 0.0), 1.0)
+        } 
+        // For pre-flop (only 2 cards)
+        else {
+            // Simple pre-flop hand strength evaluation
+            let card1 = hand.cards[0]
+            let card2 = hand.cards[1]
+            
+            // High card value (0-1)
+            let highCardValue = Double(max(card1.rank.rawValue, card2.rank.rawValue)) / Double(Rank.ace.rawValue)
+            
+            // Pair bonus
+            let pairBonus = card1.rank == card2.rank ? 0.3 : 0.0
+            
+            // Suited bonus (for potential flush)
+            let suitedBonus = card1.suit == card2.suit ? 0.1 : 0.0
+            
+            // Connected bonus (for potential straight)
+            let rankDiff = abs(card1.rank.rawValue - card2.rank.rawValue)
+            let connectedBonus = (rankDiff <= 4 && rankDiff > 0) ? 0.1 : 0.0
+            
+            // Calculate final strength (0.0 to 1.0)
+            var strength = (highCardValue * 0.5) + pairBonus + (suitedBonus * 0.5) + (connectedBonus * 0.5)
+            
+            // Ensure strength is within bounds
+            return min(max(strength, 0.0), 1.0)
+        }
+    }
+    
+    private func calculatePotentialStrength(communityCards: [Card]) -> Double {
+        // Count potential straight and flush draws
+        let allCards = hand.cards + communityCards
+        let suits = Dictionary(grouping: allCards, by: { $0.suit })
+        let flushPotential = suits.values.map { $0.count }.max() ?? 0
         
-        // Dealer will call with:
-        // - Any pair or better
-        // - High card Jack or better if no community cards
-        if evaluation.rank != .highCard {
-            return true
-        } else if communityCards.isEmpty {
-            // If no community cards, check for high card
-            if let highCard = hand.cards.max(by: { $0.rank.rawValue < $1.rank.rawValue }),
-               highCard.rank.rawValue >= 11 { // Jack or higher
-                return true
+        // Simple straight potential check
+        let sortedRanks = Set(allCards.map { $0.rank.rawValue }).sorted()
+        var straightPotential = 0
+        
+        if sortedRanks.count >= 2 {
+            for i in 0..<sortedRanks.count-1 {
+                if sortedRanks[i+1] - sortedRanks[i] <= 2 {
+                    straightPotential += 1
+                }
             }
         }
         
-        return false
+        let potential = (Double(flushPotential) * 0.5) + (Double(straightPotential) * 0.5)
+        return min(potential / 6.0, 1.0) // Normalize to 0-1 range
     }
     
     func makeDecision(communityCards: [Card]) -> DealerAction {
-        if shouldCall(communityCards: communityCards) {
-            return .call
-        } else {
-            return .fold
+        let handStrength = calculateHandStrength(communityCards: communityCards)
+        
+        // Base thresholds (more aggressive)
+        var callThreshold = 0.5  // 50% of hands will be played
+        var strongHandThreshold = 0.7
+        
+        // Adjust thresholds based on game phase
+        switch communityCards.count {
+        case 0: // Pre-flop
+            // Play more hands pre-flop (60%)
+            callThreshold = 0.4
+            strongHandThreshold = 0.6
+        case 3: // Flop
+            callThreshold = 0.5
+            strongHandThreshold = 0.65
+        case 4: // Turn
+            callThreshold = 0.55
+            strongHandThreshold = 0.7
+        case 5: // River
+            // Most aggressive on river
+            callThreshold = 0.6
+            strongHandThreshold = 0.8
+        default:
+            break
         }
+        
+        // Add some randomness (less random, more consistent)
+        let randomFactor = Double.random(in: -0.05...0.05)
+        let adjustedThreshold = max(0.2, min(0.9, callThreshold + randomFactor))
+        
+        // Always call with strong hands
+        if handStrength > strongHandThreshold {
+            return .call
+        }
+        
+        // Call with decent hands above threshold
+        if handStrength > adjustedThreshold {
+            return .call
+        }
+        
+        // Small chance to bluff with weak hands (5%)
+        if handStrength > 0.15 && Double.random(in: 0...1) < 0.05 {
+            return .call
+        }
+        
+        // Default to fold if no other conditions met
+        return .fold
     }
 }
 
