@@ -53,7 +53,7 @@ class Dealer {
             let connectedBonus = (rankDiff <= 4 && rankDiff > 0) ? 0.1 : 0.0
             
             // Calculate final strength (0.0 to 1.0)
-            var strength = (highCardValue * 0.5) + pairBonus + (suitedBonus * 0.5) + (connectedBonus * 0.5)
+            let strength = (highCardValue * 0.5) + pairBonus + (suitedBonus * 0.5) + (connectedBonus * 0.5)
             
             // Ensure strength is within bounds
             return min(max(strength, 0.0), 1.0)

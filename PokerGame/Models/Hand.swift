@@ -362,7 +362,7 @@ final class Hand: Equatable, Comparable {
     
     private func nOfAKindCards(_ n: Int) -> [Card]? {
         let rankCounts = Dictionary(grouping: cards, by: { $0.rank })
-        if let (rank, cards) = rankCounts.first(where: { $0.value.count >= n }) {
+        if let (_, cards) = rankCounts.first(where: { $0.value.count >= n }) {
             return Array(cards.prefix(n))
         }
         return nil

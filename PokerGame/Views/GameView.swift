@@ -67,7 +67,7 @@ struct GameView: View {
                 Spacer()
                 
                 // Game result
-                if let result = viewModel.gameResult {
+                if viewModel.gameResult != nil {
                     VStack(spacing: 10) {
                         Text(viewModel.getGameResultString())
                             .font(.title2)
