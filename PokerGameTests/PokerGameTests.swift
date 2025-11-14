@@ -50,7 +50,7 @@ struct CardTests {
     
     @Test("Card flip")
     func testCardFlip() {
-        var card = Card(rank: .two, suit: .hearts, isFaceUp: false)
+        let card = Card(rank: .two, suit: .hearts, isFaceUp: false)
         #expect(card.isFaceUp == false)
         card.flip()
         #expect(card.isFaceUp == true)
@@ -98,7 +98,7 @@ struct HandEvaluationTests {
         // Use different suits to prevent flush detection
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts, .diamonds, .clubs]
         let ranks: [Rank] = [.two, .four, .six, .eight, .ten, .jack, .king]
-        var hand = Hand()
+        let hand = Hand()
         
         // Add cards with different suits
         for (index, rank) in ranks.enumerated() {
@@ -119,7 +119,7 @@ struct HandEvaluationTests {
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts, .diamonds, .clubs]
         let ranks: [Rank] = [.two, .two, .four, .six, .eight, .ten, .queen]
         
-        var hand = Hand()
+        let hand = Hand()
         for (index, rank) in ranks.enumerated() {
             let suit = suits[index % suits.count]
             hand.addCard(Card(rank: rank, suit: suit))
@@ -149,7 +149,7 @@ struct HandEvaluationTests {
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts, .diamonds, .clubs]
         let ranks: [Rank] = [.two, .two, .four, .four, .six, .eight, .ten]
         
-        var hand = Hand()
+        let hand = Hand()
         for (index, rank) in ranks.enumerated() {
             let suit = suits[index % suits.count]
             hand.addCard(Card(rank: rank, suit: suit))
@@ -183,7 +183,7 @@ struct HandEvaluationTests {
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts, .diamonds, .clubs]
         let ranks: [Rank] = [.three, .three, .three, .five, .seven, .nine, .jack]
         
-        var hand = Hand()
+        let hand = Hand()
         for (index, rank) in ranks.enumerated() {
             let suit = suits[index % suits.count]
             hand.addCard(Card(rank: rank, suit: suit))
@@ -222,7 +222,7 @@ struct HandEvaluationTests {
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts]
         let ranks: [Rank] = [.two, .three, .four, .five, .six]
         
-        var hand = Hand()
+        let hand = Hand()
         for (index, rank) in ranks.enumerated() {
             hand.addCard(Card(rank: rank, suit: suits[index]))
         }
@@ -238,7 +238,7 @@ struct HandEvaluationTests {
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts]
         let ranks: [Rank] = [.ace, .two, .three, .four, .five]
         
-        var hand = Hand()
+        let hand = Hand()
         for (index, rank) in ranks.enumerated() {
             hand.addCard(Card(rank: rank, suit: suits[index]))
         }
@@ -255,7 +255,7 @@ struct HandEvaluationTests {
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts]
         let ranks: [Rank] = [.ten, .jack, .queen, .king, .ace]
         
-        var hand = Hand()
+        let hand = Hand()
         for (index, rank) in ranks.enumerated() {
             hand.addCard(Card(rank: rank, suit: suits[index]))
         }
@@ -272,7 +272,7 @@ struct HandEvaluationTests {
         let suits: [Suit] = [.hearts, .diamonds, .clubs, .spades, .hearts, .diamonds, .clubs]
         let ranks: [Rank] = [.three, .four, .five, .six, .seven, .nine, .ten]
         
-        var hand = Hand()
+        let hand = Hand()
         for (index, rank) in ranks.enumerated() {
             hand.addCard(Card(rank: rank, suit: suits[index % suits.count]))
         }
@@ -738,43 +738,43 @@ struct GameFlowTests {
     
     @Test("Complete game flow")
     func testCompleteGameFlow() async {
-        let viewModel = PokerGameViewModel()
+        let viewModel = await PokerGameViewModel()
         
         // Initial state
         #expect(viewModel.gameState == .dealing)
-        #expect(viewModel.playerHand.cards.count == 2, "Player should have 2 cards")
+        await #expect(viewModel.playerHand.cards.count == 2, "Player should have 2 cards")
         
         // Deal flop
-        viewModel.dealFlop()
+        await viewModel.dealFlop()
         #expect(viewModel.communityCards.count == 3, "Flop should add 3 community cards")
         #expect(viewModel.gameState == .flop, "Game state should be .flop after dealing flop")
         
         // Player calls after flop
-        viewModel.test_setGameState(.playerTurn)
-        viewModel.playerCalls()
+        await viewModel.test_setGameState(.playerTurn)
+        await viewModel.playerCalls()
         
         // Deal turn - should be called with .flop state
-        viewModel.test_setGameState(.flop)
-        viewModel.dealTurn()
+        await viewModel.test_setGameState(.flop)
+        await viewModel.dealTurn()
         #expect(viewModel.communityCards.count == 4, "Turn should add 1 more card (total 4)")
         #expect(viewModel.gameState == .turn, "Game state should be .turn after dealing turn")
         
         // Player calls after turn
-        viewModel.test_setGameState(.playerTurn)
-        viewModel.playerCalls()
+        await viewModel.test_setGameState(.playerTurn)
+        await viewModel.playerCalls()
         
         // Deal river - should be called with .turn state
-        viewModel.test_setGameState(.turn)
-        viewModel.dealRiver()
+        await viewModel.test_setGameState(.turn)
+        await viewModel.dealRiver()
         #expect(viewModel.communityCards.count == 5, "River should add 1 more card (total 5)")
         #expect(viewModel.gameState == .river, "Game state should be .river after dealing river")
         
         // Player calls after river
-        viewModel.test_setGameState(.playerTurn)
-        viewModel.playerCalls()
+        await viewModel.test_setGameState(.playerTurn)
+        await viewModel.playerCalls()
         
         // Start the evaluation
-        viewModel.evaluateFinalHands()
+        await viewModel.evaluateFinalHands()
         
         // Wait for the evaluation to complete with a timeout
         let maxAttempts = 20 // 2 seconds total with 0.1s interval
@@ -782,7 +782,7 @@ struct GameFlowTests {
         
         // Poll the state until we get the expected result or time out
         while attempts < maxAttempts {
-            if viewModel.gameState == .gameOver && 
+            if await viewModel.gameState == .gameOver && 
                viewModel.handEvaluation != nil && 
                viewModel.dealerHandEvaluation != nil {
                 break
