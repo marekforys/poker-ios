@@ -52,6 +52,6 @@ class Player: ObservableObject {
     }
     
     func canAfford(amount: Int) -> Bool {
-        return tokens >= amount || tokens > 0
+        return amount >= 0 && tokens >= amount
     }
 }
