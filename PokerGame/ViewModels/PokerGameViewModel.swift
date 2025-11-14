@@ -361,9 +361,7 @@ class PokerGameViewModel: ObservableObject {
             self.objectWillChange.send()
         }
     }
-    
-    
-    
+
     private func evaluateHand() {
         let allCards = playerHand.cards + communityCards
         
@@ -378,9 +376,7 @@ class PokerGameViewModel: ObservableObject {
             }
         }
     }
-    
-    
-    
+
     func getHandRankString() -> String {
         guard let evaluation = handEvaluation else { return "" }
         return evaluation.rank.description

@@ -221,35 +221,49 @@ final class Hand: Equatable, Comparable {
         guard let flushSuit = flushSuit() else { return nil }
         let flushCards = cards.filter { $0.suit == flushSuit }
         
-        // Get the unique ranks and sort them in descending order
-        let uniqueRanks = Array(Set(flushCards.map { $0.rank })).sorted { $0.rawValue > $1.rawValue }
+        // Need at least 5 cards for a straight flush
+        guard flushCards.count >= 5 else { return nil }
         
-        // Check for Ace-low straight flush (A-2-3-4-5)
+        // Sort the flush cards by rank in descending order
+        let sortedFlushCards = flushCards.sorted { $0.rank.rawValue > $1.rank.rawValue }
+        let uniqueRanks = Array(Set(sortedFlushCards.map { $0.rank })).sorted { $0.rawValue > $1.rawValue }
+        
+        // Check for Ace-low straight flush (A-2-3-4-5) - the wheel
         let wheelRanks: Set<Rank> = [.ace, .two, .three, .four, .five]
         let hasWheel = wheelRanks.isSubset(of: uniqueRanks.map { $0 })
         
         if hasWheel {
-            // Return the wheel straight flush in order (A-5-4-3-2)
-            return wheelRanks.sorted { $0.rawValue > $1.rawValue }
-                .compactMap { rank in
-                    flushCards.first { $0.rank == rank }
-                }
+            // Return the wheel straight flush in order (5-4-3-2-A)
+            return [
+                sortedFlushCards.first { $0.rank == .five }!,
+                sortedFlushCards.first { $0.rank == .four }!,
+                sortedFlushCards.first { $0.rank == .three }!,
+                sortedFlushCards.first { $0.rank == .two }!,
+                sortedFlushCards.first { $0.rank == .ace }!
+            ]
         }
         
-        // Check for regular straight flush
-        for i in 0..<(uniqueRanks.count - 4) {
+        // Check for regular straight flush using a sliding window approach
+        // We need at least 5 unique ranks
+        guard uniqueRanks.count >= 5 else { return nil }
+        
+        // Check for a straight of 5 cards
+        for i in 0...(uniqueRanks.count - 5) {
             let currentRank = uniqueRanks[i].rawValue
-            let straightRanks = (currentRank-4...currentRank).map { Rank(rawValue: $0) }.compactMap { $0 }
             
-            if Set(straightRanks).isSubset(of: uniqueRanks) {
-                // Return the straight flush cards in order (high to low)
-                return straightRanks.sorted { $0.rawValue > $1.rawValue }
-                    .compactMap { rank in
-                        flushCards.first { $0.rank == rank }
-                    }
+            // Check if we have 5 consecutive ranks starting at currentRank
+            let straightRanks = (currentRank-4...currentRank).compactMap { Rank(rawValue: $0) }
+            let hasStraight = Set(straightRanks).isSubset(of: uniqueRanks)
+            
+            if hasStraight {
+                // We have a straight flush, return the cards in order (high to low)
+                return straightRanks.reversed().compactMap { rank in
+                    sortedFlushCards.first { $0.rank == rank }
+                }
             }
         }
         
+        // If we get here, no straight flush was found
         return nil
     }
     
@@ -310,25 +324,29 @@ final class Hand: Equatable, Comparable {
         }
         
         // Check for regular straight (5 consecutive ranks)
-        // We need to check all possible sequences of 5 consecutive ranks
-        for i in 0...(uniqueRanks.count - 5) {
-            let currentRank = uniqueRanks[i]
-            let straightRanks = [currentRank, currentRank + 1, currentRank + 2,
-                                 currentRank + 3, currentRank + 4]
-            
-            // If all ranks in the straight exist in our unique ranks
-            if Set(straightRanks).isSubset(of: uniqueRanks) {
-                // Get the actual ranks we have that form this straight
-                let consecutiveRanks = uniqueRanks.filter { straightRanks.contains($0) }
+        // We'll use a sliding window approach to find 5 consecutive numbers
+        // Since the array is sorted, we can check for consecutive sequences
+        var consecutiveCount = 1
+        
+        for i in 1..<uniqueRanks.count {
+            // If current rank is one more than previous, increment consecutive count
+            if uniqueRanks[i] == uniqueRanks[i-1] + 1 {
+                consecutiveCount += 1
                 
-                // Verify we have at least 5 consecutive ranks
-                if consecutiveRanks.count >= 5 {
-                    // Find the highest rank in the straight
-                    if let maxRank = straightRanks.last(where: { uniqueRanks.contains($0) }) {
-                        return Rank(rawValue: maxRank)
-                    }
+                // If we've found 5 consecutive ranks, return the highest one
+                if consecutiveCount >= 5 {
+                    return Rank(rawValue: uniqueRanks[i])
                 }
+            } else if uniqueRanks[i] != uniqueRanks[i-1] {
+                // Reset consecutive count if not consecutive and not duplicate
+                consecutiveCount = 1
             }
+            // If duplicate rank, just continue with the same consecutiveCount
+        }
+        
+        // Special case: Check for the highest possible straight when we have exactly 5 unique ranks
+        if uniqueRanks.count == 5 && uniqueRanks == Array(uniqueRanks[0]..<uniqueRanks[0]+5) {
+            return Rank(rawValue: uniqueRanks[4])
         }
         
         return nil
@@ -342,8 +360,35 @@ final class Hand: Equatable, Comparable {
     }
     
     private func flushSuit() -> Suit? {
+        // Group cards by suit and find suits with 5 or more cards
         let suitCounts = Dictionary(grouping: cards, by: { $0.suit })
-        return suitCounts.first { $0.value.count >= 5 }?.key
+        
+        // Only consider suits that can form a flush (5 or more cards)
+        let flushSuits = suitCounts.filter { $0.value.count >= 5 }
+        
+        // If no flush is possible, return nil
+        guard !flushSuits.isEmpty else { return nil }
+        
+        // Get all cards that could form a flush, sorted by rank (descending)
+        let flushCards = flushSuits.map { suit, cards in
+            return (suit, cards.sorted { $0.rank.rawValue > $1.rank.rawValue })
+        }
+        
+        // Find the suit with the highest possible flush
+        if let bestFlush = flushCards.max(by: { (a, b) -> Bool in
+            // Compare the highest cards in each flush to find the best one
+            for (aCard, bCard) in zip(a.1, b.1) {
+                if aCard.rank != bCard.rank {
+                    return aCard.rank.rawValue < bCard.rank.rawValue
+                }
+            }
+            // If we get here, the flushes are of equal rank, so it doesn't matter which we pick
+            return a.1.count < b.1.count
+        }) {
+            return bestFlush.0
+        }
+        
+        return nil
     }
     
     private func twoPair() -> ([Rank], [Card])? {
