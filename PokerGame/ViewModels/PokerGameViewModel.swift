@@ -15,6 +15,16 @@ class PokerGameViewModel: ObservableObject {
     @Published private(set) var dealerAction: DealerAction?
     @Published var showDealerCards = false
     
+    // Token management
+    @Published private(set) var player = Player()
+    @Published private(set) var pot = 0
+    private var currentBetAmount = 0
+    private var playerHasActed = false
+    
+    func addToPot(_ amount: Int) {
+        pot += amount
+    }
+    
     enum GameState: Equatable {
         case notStarted
         case dealing
@@ -63,6 +73,12 @@ class PokerGameViewModel: ObservableObject {
         gameState = .dealing
         gameResult = nil
         showDealerCards = false
+        pot = 0
+        currentBetAmount = 0
+        playerHasActed = false
+        
+        // Reset player and dealer bets
+        player.resetBet()
         
         print("Game state reset, dealing initial cards...")
         // Deal initial cards
@@ -230,20 +246,28 @@ class PokerGameViewModel: ObservableObject {
         
         if playerEval.rank.rawValue > dealerEval.rank.rawValue {
             gameResult = .playerWins
+            // Player wins the pot
+            player.win(amount: pot)
         } else if dealerEval.rank.rawValue > playerEval.rank.rawValue {
             gameResult = .dealerWins
+            // Dealer wins the pot
+            player.lose()
         } else {
             // Same rank, compare high cards
             for (playerCard, dealerCard) in zip(playerEval.highCards, dealerEval.highCards) {
                 if playerCard.rank.rawValue > dealerCard.rank.rawValue {
                     gameResult = .playerWins
+                    player.win(amount: pot)
                     return
                 } else if dealerCard.rank.rawValue > playerCard.rank.rawValue {
                     gameResult = .dealerWins
+                    player.lose()
                     return
                 }
             }
+            // It's a tie, split the pot (in a real game, handle side pots and odd chips)
             gameResult = .tie
+            player.win(amount: pot / 2)
         }
     }
     
@@ -275,6 +299,15 @@ class PokerGameViewModel: ObservableObject {
     
     func playerCalls() {
         print("Player calls. Current game state: \(gameState), community cards: \(communityCards.count)")
+        
+        // Player matches the current bet
+        let amountToCall = currentBetAmount - player.currentBet
+        if amountToCall > 0 {
+            _ = player.placeBet(amount: amountToCall)
+            pot += amountToCall
+        }
+        
+        playerHasActed = true
         
         if communityCards.isEmpty {
             // If no community cards, deal the flop
@@ -311,6 +344,9 @@ class PokerGameViewModel: ObservableObject {
         // Set game result and state
         gameResult = .playerFolded
         gameState = .gameOver
+        
+        // Dealer wins the pot
+        // In a real game, you might want to handle this differently
     }
     
     func dealerMakesDecision() {
@@ -399,15 +435,15 @@ class PokerGameViewModel: ObservableObject {
         
         switch result {
         case .playerWins:
-            return "You win with \(getHandRankString())"
+            return "You win \(pot) tokens with \(getHandRankString())"
         case .dealerWins:
-            return "Dealer wins with \(getDealerHandRankString())"
+            return "Dealer wins \(pot) tokens with \(getDealerHandRankString())"
         case .tie:
-            return "It's a tie!"
+            return "It's a tie! \(pot/2) tokens returned"
         case .playerFolded:
-            return "You folded. Dealer wins!"
+            return "You folded. Dealer wins \(pot) tokens!"
         case .dealerFolded:
-            return "Dealer folded. You win!"
+            return "Dealer folded. You win \(pot) tokens!"
         }
     }
 }

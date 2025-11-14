@@ -9,6 +9,27 @@ struct GameView: View {
             Color.green.edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 12) {
+                // Token and pot info
+                HStack {
+                    Text("Tokens: \(viewModel.player.tokens)")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(Color.blue.opacity(0.7))
+                        .cornerRadius(8)
+                    
+                    Spacer()
+                    
+                    Text("Pot: \(viewModel.pot)")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(Color.red.opacity(0.7))
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                
                 // Game status
                 Text(viewModel.gameState.description)
                     .font(.headline)
@@ -128,29 +149,83 @@ struct GameView: View {
                     
                     // Action buttons
                     if viewModel.gameState == .playerTurn {
-                        HStack(spacing: 20) {
-                            Button(action: {
-                                viewModel.playerCalls()
-                            }) {
-                                Text("Call")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .cornerRadius(10)
+                        VStack(spacing: 10) {
+                            // Betting controls
+                            HStack(spacing: 10) {
+                                Button(action: {
+                                    // Bet 10 tokens
+                                    let betAmount = 10
+                                    if viewModel.player.placeBet(amount: betAmount) {
+                                        viewModel.addToPot(betAmount)
+                                    }
+                                }) {
+                                    Text("Bet 10")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.blue.opacity(0.8))
+                                        .cornerRadius(10)
+                                }
+                                
+                                Button(action: {
+                                    // Bet 50 tokens
+                                    let betAmount = 50
+                                    if viewModel.player.placeBet(amount: betAmount) {
+                                        viewModel.addToPot(betAmount)
+                                    }
+                                }) {
+                                    Text("Bet 50")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.blue.opacity(0.8))
+                                        .cornerRadius(10)
+                                }
+                                
+                                Button(action: {
+                                    // All-in
+                                    let allInAmount = viewModel.player.tokens
+                                    if viewModel.player.placeBet(amount: allInAmount) {
+                                        viewModel.addToPot(allInAmount)
+                                    }
+                                }) {
+                                    Text("All-in")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.red.opacity(0.8))
+                                        .cornerRadius(10)
+                                }
                             }
                             
-                            Button(action: {
-                                viewModel.playerFolds()
-                            }) {
-                                Text("Fold")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.red)
-                                    .cornerRadius(10)
+                            // Call/Fold buttons
+                            HStack(spacing: 20) {
+                                Button(action: {
+                                    viewModel.playerCalls()
+                                }) {
+                                    Text("Call")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.blue)
+                                        .cornerRadius(10)
+                                }
+                                
+                                Button(action: {
+                                    viewModel.playerFolds()
+                                }) {
+                                    Text("Fold")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.red)
+                                        .cornerRadius(10)
+                                }
                             }
                         }
                         .padding(.horizontal)
