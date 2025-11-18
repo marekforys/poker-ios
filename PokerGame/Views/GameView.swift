@@ -2,12 +2,12 @@ import SwiftUI
 
 struct GameView: View {
     @StateObject private var viewModel = PokerGameViewModel()
-    
+
     var body: some View {
         ZStack {
             // Background
             Color.green.edgesIgnoringSafeArea(.all)
-            
+
             VStack(spacing: 12) {
                 // Token and pot info
                 HStack {
@@ -17,9 +17,9 @@ struct GameView: View {
                         .padding(8)
                         .background(Color.blue.opacity(0.7))
                         .cornerRadius(8)
-                    
+
                     Spacer()
-                    
+
                     Text("Pot: \(viewModel.pot)")
                         .font(.headline)
                         .foregroundColor(.white)
@@ -29,7 +29,7 @@ struct GameView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
-                
+
                 // Game status
                 Text(viewModel.gameState.description)
                     .font(.headline)
@@ -37,13 +37,13 @@ struct GameView: View {
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
                     .background(Color.black.opacity(0.3))
-                
+
                 // Dealer's hand
                 VStack(spacing: 8) {
                     Text("Dealer's Hand")
                         .font(.headline)
                         .foregroundColor(.white)
-                    
+
                     HStack(spacing: -20) {
                         ForEach(viewModel.dealer.hand.cards) { card in
                             let isBestCard = viewModel.dealerBestHandCards.contains { $0.id == card.id }
@@ -59,17 +59,17 @@ struct GameView: View {
                     .padding(.vertical, 10)
                 }
                 .padding(.horizontal)
-                
+
                 // Community cards
                 VStack(spacing: 8) {
                     Text("Community Cards")
                         .font(.headline)
                         .foregroundColor(.white)
-                    
+
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: -15) {
                             ForEach(viewModel.communityCards) { card in
-                                let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id } || 
+                                let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id } ||
                                                viewModel.dealerBestHandCards.contains { $0.id == card.id }
                                 CardView(card: card)
                                     .scaleEffect(0.8)
@@ -84,9 +84,9 @@ struct GameView: View {
                     .frame(height: 120)
                 }
                 .padding(.horizontal)
-                
+
                 Spacer()
-                
+
                 // Game result
                 if viewModel.gameResult != nil {
                     VStack(spacing: 10) {
@@ -104,13 +104,34 @@ struct GameView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                 }
-                
+
                 // Player's hand
                 VStack(spacing: 8) {
-                    Text("Your Hand")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    
+                    HStack {
+                        Text("Your Hand")
+                            .font(.headline)
+                            .foregroundColor(.white)
+
+                        Spacer()
+
+                        if viewModel.winProbability > 0 {
+                            Text("Win: \(Int(viewModel.winProbability * 100))%")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(
+                                            viewModel.winProbability > 0.6 ? Color.green.opacity(0.8) :
+                                            viewModel.winProbability > 0.4 ? Color.yellow.opacity(0.8) :
+                                            Color.red.opacity(0.8)
+                                        )
+                                )
+                        }
+                    }
+
                     HStack(spacing: -20) {
                         ForEach(viewModel.playerHand.cards) { card in
                             let isBestCard = viewModel.bestHandCards.contains { $0.id == card.id }
@@ -126,7 +147,7 @@ struct GameView: View {
                     .padding(.vertical, 10)
                 }
                 .padding(.horizontal)
-                
+
                 // Game controls
                 VStack(spacing: 15) {
                     // Hand evaluation
@@ -135,7 +156,7 @@ struct GameView: View {
                             Text("Your hand: \(viewModel.getHandRankString())")
                                 .font(.headline)
                                 .foregroundColor(.white)
-                            
+
                             if viewModel.showDealerCards {
                                 Text("Dealer's hand: \(viewModel.getDealerHandRankString())")
                                     .font(.headline)
@@ -146,7 +167,7 @@ struct GameView: View {
                         .background(Color.black.opacity(0.3))
                         .cornerRadius(10)
                     }
-                    
+
                     // Action buttons
                     if viewModel.gameState == .playerTurn {
                         VStack(spacing: 10) {
@@ -167,7 +188,7 @@ struct GameView: View {
                                         .background(Color.blue.opacity(0.8))
                                         .cornerRadius(10)
                                 }
-                                
+
                                 Button(action: {
                                     // Bet 50 tokens
                                     let betAmount = 50
@@ -183,7 +204,7 @@ struct GameView: View {
                                         .background(Color.blue.opacity(0.8))
                                         .cornerRadius(10)
                                 }
-                                
+
                                 Button(action: {
                                     // All-in
                                     let allInAmount = viewModel.player.tokens
@@ -200,7 +221,7 @@ struct GameView: View {
                                         .cornerRadius(10)
                                 }
                             }
-                            
+
                             // Call/Fold buttons
                             HStack(spacing: 20) {
                                 Button(action: {
@@ -214,7 +235,7 @@ struct GameView: View {
                                         .background(Color.blue)
                                         .cornerRadius(10)
                                 }
-                                
+
                                 Button(action: {
                                     viewModel.playerFolds()
                                 }) {
@@ -262,7 +283,7 @@ struct GameView: View {
             .padding(.top, 20)
         }
     }
-    
+
     private func buttonText() -> String {
         switch viewModel.gameState {
         case .notStarted, .gameOver:
@@ -281,7 +302,7 @@ struct GameView: View {
             return "Dealer's Turn"
         }
     }
-    
+
     private func buttonColor() -> Color {
         switch viewModel.gameState {
         case .notStarted, .gameOver:
@@ -297,11 +318,11 @@ struct CardView: View {
     private let cardWidth: CGFloat = 80
     private let cardHeight: CGFloat = 120
     private let cornerRadius: CGFloat = 8
-    
+
     private var cardColor: Color {
         card.suit == .hearts || card.suit == .diamonds ? .red : .black
     }
-    
+
     var body: some View {
         ZStack {
             // Card background with border
@@ -313,7 +334,7 @@ struct CardView: View {
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 )
                 .shadow(radius: 2, x: 0, y: 2)
-            
+
             if card.isFaceUp {
                 VStack(spacing: 0) {
                     // Top rank and suit
@@ -331,16 +352,16 @@ struct CardView: View {
                         Spacer()
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    
+
                     Spacer()
-                    
+
                     // Center suit symbol
                     Text(card.suit.rawValue)
                         .font(.system(size: 28))
                         .foregroundColor(cardColor)
-                    
+
                     Spacer()
-                    
+
                     // Bottom rank and suit (upside down)
                     HStack(alignment: .bottom) {
                         Spacer()
@@ -375,7 +396,7 @@ struct CardView: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: cornerRadius)
                                 .stroke(Color.white.opacity(0.5), lineWidth: 1)
-                            
+
                             // Card back pattern
                             Image(systemName: "suit.spade.fill")
                                 .font(.title3)
