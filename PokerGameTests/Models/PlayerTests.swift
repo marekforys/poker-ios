@@ -68,13 +68,13 @@ struct PlayerTests {
     @Test("Player loses")
     func testLose() async throws {
         let initialTokens = 1000
-        let player = Player(initialTokens: initialTokens)
+        let player = await Player(initialTokens: initialTokens)
         
         // Place a bet first
-        _ = player.placeBet(amount: 100)
+        _ = await player.placeBet(amount: 100)
         
         // Lose (reset bet)
-        player.lose()
+        await player.lose()
         
         // Need to wait for async operation to complete
         try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
