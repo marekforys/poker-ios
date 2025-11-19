@@ -24,6 +24,7 @@ class PokerGameViewModel: ObservableObject {
 
     func addToPot(_ amount: Int) {
         pot += amount
+        checkGameOverCondition()
     }
 
     func calculateWinProbability() {
@@ -87,6 +88,15 @@ class PokerGameViewModel: ObservableObject {
         winProbability = Double(wins) / Double(simulations)
     }
 
+    private func checkGameOverCondition() {
+        if player.tokens <= 0 && gameState != .gameOver {
+            gameState = .gameOver
+            gameResult = .playerOutOfTokens
+            print("Game over - player is out of tokens!")
+            objectWillChange.send()
+        }
+    }
+
     enum GameState: Equatable {
         case notStarted
         case dealing
@@ -117,6 +127,7 @@ class PokerGameViewModel: ObservableObject {
         case tie
         case playerFolded
         case dealerFolded
+        case playerOutOfTokens
     }
 
     init() {
@@ -327,6 +338,7 @@ class PokerGameViewModel: ObservableObject {
             gameResult = .dealerWins
             // Dealer wins the pot
             player.lose()
+            checkGameOverCondition()
         } else {
             // Same rank, compare high cards
             for (playerCard, dealerCard) in zip(playerEval.highCards, dealerEval.highCards) {
@@ -337,6 +349,7 @@ class PokerGameViewModel: ObservableObject {
                 } else if dealerCard.rank.rawValue > playerCard.rank.rawValue {
                     gameResult = .dealerWins
                     player.lose()
+                    checkGameOverCondition()
                     return
                 }
             }
@@ -422,6 +435,7 @@ class PokerGameViewModel: ObservableObject {
 
         // Dealer wins the pot
         // In a real game, you might want to handle this differently
+        checkGameOverCondition()
     }
 
     func dealerMakesDecision() {
@@ -519,6 +533,8 @@ class PokerGameViewModel: ObservableObject {
             return "You folded. Dealer wins \(pot) tokens!"
         case .dealerFolded:
             return "Dealer folded. You win \(pot) tokens!"
+        case .playerOutOfTokens:
+            return "Game Over! You're out of tokens!"
         }
     }
 }
