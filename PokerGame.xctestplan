@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "48FFBABF-29EA-4E3A-9851-57B654B27B6E",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:PokerGame.xcodeproj",
+      "identifier" : "EA45CB5D2EBE5FA400CB6870",
+      "name" : "PokerGame"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:PokerGame.xcodeproj",
+        "identifier" : "EA0B8B582EBE69FE002D061B",
+        "name" : "PokerGameTests"
+      }
+    }
+  ],
+  "version" : 1
+}
