@@ -111,18 +111,18 @@ struct PlayerTests {
     @Test("Multiple bets")
     func testMultipleBets() async throws {
         let initialTokens = 1000
-        let player = await Player(initialTokens: initialTokens)
+        let player = Player(initialTokens: initialTokens)
         
         // First bet
-        _ = await player.placeBet(amount: 100)
+        _ = player.placeBet(amount: 100)
         try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
         
         #expect(player.tokens == 900, "After first bet, tokens should be 900 (1000 - 100)")
         #expect(player.currentBet == 100, "Current bet should be 100 after first bet")
         
         // Second bet
-        _ = await player.placeBet(amount: 200)
-        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        _ = player.placeBet(amount: 200)
+        //try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
         
         #expect(player.tokens == 700, "After second bet, tokens should be 700 (900 - 200)")
         #expect(player.currentBet == 300, "Current bet should be 300 (100 + 200) after second bet")
