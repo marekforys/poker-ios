@@ -19,6 +19,16 @@
   },
   "testTargets" : [
     {
+      "skippedTests" : {
+        "suites" : [
+          {
+            "name" : "PlayerTests",
+            "testFunctions" : [
+              "testMultipleBets()"
+            ]
+          }
+        ]
+      },
       "target" : {
         "containerPath" : "container:PokerGame.xcodeproj",
         "identifier" : "EA0B8B582EBE69FE002D061B",
@@ -26,5 +36,5 @@
       }
     }
   ],
-  "version" : 1
+  "version" : 2
 }
